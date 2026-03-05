@@ -19,7 +19,7 @@ Style rules (follow strictly):
 - Never stack more than 3 open-ended questions in a row`
 
 export async function POST(req: NextRequest) {
-  const { mode, sessionId: _sessionId, conversationSoFar, fingerprint } = await req.json()
+  const { mode, conversationSoFar, fingerprint } = await req.json()
 
   const modeArc = MODE_ARCS[mode] ?? MODE_ARCS['vent']
 

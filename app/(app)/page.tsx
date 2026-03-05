@@ -96,7 +96,7 @@ export default function HomePage() {
       <div className="mt-auto pt-10">
         <div className="rounded-2xl bg-green-50 px-5 py-4">
           <p className="text-sm text-green-800 leading-relaxed italic">
-            "The act of writing is the act of discovering what you believe."
+            &quot;The act of writing is the act of discovering what you believe.&quot;
           </p>
           <p className="mt-1.5 text-xs text-green-600">— David Hare</p>
         </div>
