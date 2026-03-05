@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 type Message = { role: 'assistant' | 'user'; content: string }
 
-export default function RecordPage() {
+function RecordPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const mode = searchParams.get('mode') ?? 'vent'
@@ -187,5 +187,19 @@ export default function RecordPage() {
         </button>
       </div>
     </div>
+  )
+}
+
+export default function RecordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-green-500" />
+        </div>
+      }
+    >
+      <RecordPageInner />
+    </Suspense>
   )
 }
