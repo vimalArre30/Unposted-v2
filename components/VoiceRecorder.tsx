@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 
 type RecorderState = 'idle' | 'recording' | 'recorded' | 'transcribing' | 'done'
+type Lang = 'en' | 'ta' | 'hi'
+
+const LANGS: { code: Lang; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'ta', label: 'தமிழ்' },
+  { code: 'hi', label: 'हिंदी' },
+]
 
 interface VoiceRecorderProps {
   onTranscript: (transcript: string) => void
@@ -23,6 +30,8 @@ export default function VoiceRecorder({ onTranscript }: VoiceRecorderProps) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [transcript, setTranscript] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selectedLang, setSelectedLang] = useState<Lang>('en')
+  const [mixWithEnglish, setMixWithEnglish] = useState(false)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -122,6 +131,8 @@ export default function VoiceRecorder({ onTranscript }: VoiceRecorderProps) {
 
     const formData = new FormData()
     formData.append('audio', blobRef.current, 'recording.webm')
+    formData.append('language', selectedLang)
+    formData.append('mix', mixWithEnglish ? 'true' : 'false')
 
     try {
       const res = await fetch('/api/transcribe', {
@@ -130,6 +141,11 @@ export default function VoiceRecorder({ onTranscript }: VoiceRecorderProps) {
       })
       if (!res.ok) throw new Error('Transcription failed')
       const data = await res.json()
+      if (data.ambient) {
+        setError('No speech detected. Please try again.')
+        setState('recorded')
+        return
+      }
       setTranscript(data.transcript)
       setState('done')
       onTranscript(data.transcript)
@@ -141,6 +157,41 @@ export default function VoiceRecorder({ onTranscript }: VoiceRecorderProps) {
 
   return (
     <div className="flex flex-col items-center gap-5 w-full">
+      {/* Language selector — always visible */}
+      <div className="flex flex-col items-center gap-2">
+        <div className="flex gap-2">
+          {LANGS.map(({ code, label }) => (
+            <button
+              key={code}
+              onClick={() => {
+                setSelectedLang(code)
+                if (code === 'en') setMixWithEnglish(false)
+              }}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                selectedLang === code
+                  ? 'border-green-700 bg-green-50 text-green-800'
+                  : 'border-gray-200 bg-white text-gray-500'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Mix toggle — only for Tamil or Hindi */}
+        {selectedLang !== 'en' && (
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={mixWithEnglish}
+              onChange={(e) => setMixWithEnglish(e.target.checked)}
+              className="h-3.5 w-3.5 accent-green-700"
+            />
+            <span className="text-xs text-gray-400">Mix with English</span>
+          </label>
+        )}
+      </div>
+
       {/* IDLE */}
       {state === 'idle' && (
         <button
