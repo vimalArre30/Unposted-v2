@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import VoiceRecorder from '@/components/VoiceRecorder'
 
 type Message = { role: 'assistant' | 'user'; content: string }
 
@@ -20,6 +21,8 @@ function RecordPageInner() {
   const [answer, setAnswer] = useState('')
   const [isInitializing, setIsInitializing] = useState(true)
   const [isFetching, setIsFetching] = useState(false)
+  const [showTextInput, setShowTextInput] = useState(false)
+  const [recorderKey, setRecorderKey] = useState(0)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -88,7 +91,9 @@ function RecordPageInner() {
     }
 
     setCurrentQuestion(data.question)
-    setTimeout(() => textareaRef.current?.focus(), 100)
+    setRecorderKey((k) => k + 1)
+    setAnswer('')
+    if (showTextInput) setTimeout(() => textareaRef.current?.focus(), 100)
   }
 
   async function handleContinue() {
@@ -164,18 +169,41 @@ function RecordPageInner() {
           )}
         </p>
 
-        {/* Answer textarea */}
-        <textarea
-          ref={textareaRef}
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleContinue()
-          }}
-          placeholder="Write here..."
-          rows={5}
-          className="mt-2 w-full resize-none rounded-2xl border-2 border-green-600 bg-white px-4 py-3 text-base text-gray-800 placeholder-gray-300 focus:outline-none"
+        {/* Voice Recorder */}
+        <VoiceRecorder
+          key={recorderKey}
+          onTranscript={(t) => setAnswer(t)}
         />
+
+        {/* Text fallback toggle */}
+        {!showTextInput ? (
+          <button
+            onClick={() => setShowTextInput(true)}
+            className="text-xs text-gray-400 underline underline-offset-2 hover:text-gray-600"
+          >
+            Type instead
+          </button>
+        ) : (
+          <div className="w-full flex flex-col gap-3">
+            <textarea
+              ref={textareaRef}
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleContinue()
+              }}
+              placeholder="Write here..."
+              rows={4}
+              className="w-full resize-none rounded-2xl border-2 border-green-600 bg-white px-4 py-3 text-base text-gray-800 placeholder-gray-300 focus:outline-none"
+            />
+            <button
+              onClick={() => setShowTextInput(false)}
+              className="text-xs text-gray-400 underline underline-offset-2 hover:text-gray-600 self-center"
+            >
+              Use mic instead
+            </button>
+          </div>
+        )}
 
         {/* Continue */}
         <button
