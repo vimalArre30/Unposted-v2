@@ -29,44 +29,6 @@ function SmallCircleIcon() {
   )
 }
 
-function CheckItem({ text }: { text: string }) {
-  const [checked, setChecked] = useState(false)
-
-  return (
-    <button
-      onClick={() => setChecked((c) => !c)}
-      className="flex items-start gap-2.5 text-left w-full group py-0.5"
-    >
-      {/* Checkbox */}
-      <span
-        className="mt-0.5 flex-shrink-0 h-4 w-4 rounded-full border transition-all duration-200"
-        style={{
-          borderColor: checked ? '#4A7C59' : '#C4D9C4',
-          backgroundColor: checked ? '#4A7C59' : 'transparent',
-          boxShadow: checked ? '0 0 0 2px rgba(74,124,89,0.15)' : 'none',
-        }}
-      >
-        {checked && (
-          <svg viewBox="0 0 16 16" fill="none" className="w-full h-full">
-            <path d="M4 8.5L7 11.5L12 5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </span>
-
-      {/* Text */}
-      <span
-        className="text-sm leading-relaxed transition-all duration-200"
-        style={{
-          color: checked ? '#9ca3af' : '#374151',
-          textDecoration: checked ? 'line-through' : 'none',
-        }}
-      >
-        {text}
-      </span>
-    </button>
-  )
-}
-
 function Section({
   items,
   icon,
@@ -76,8 +38,6 @@ function Section({
   icon: React.ReactNode
   label: string
 }) {
-  const [checkedCount, setCheckedCount] = useState(0)
-
   // Track checked state at section level for header fade
   const [checkedMap, setCheckedMap] = useState<boolean[]>(() => items.map(() => false))
   const allChecked = checkedMap.every(Boolean)
