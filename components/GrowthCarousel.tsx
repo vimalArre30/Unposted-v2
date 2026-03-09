@@ -119,8 +119,6 @@ export default function GrowthCarousel({ onClose }: GrowthCarouselProps) {
     touchStartX.current = null
   }
 
-  const slide = SLIDES[index]
-
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
       <div

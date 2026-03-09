@@ -4,7 +4,7 @@ import { openai } from '@/lib/openai'
 
 function mergeSignals(existing: string[] | null, incoming: string[]): string[] {
   const combined = [...(existing ?? []), ...incoming]
-  return [...new Set(combined)].slice(0, 10)
+  return Array.from(new Set(combined)).slice(0, 10)
 }
 
 export async function POST(req: NextRequest) {

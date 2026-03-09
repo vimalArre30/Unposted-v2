@@ -3,10 +3,10 @@ const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 interface StreakWidgetProps {
   streak: number
   weekDays: boolean[]
-  totalEntries: number
+  totalEntries?: number
 }
 
-export default function StreakWidget({ streak, weekDays, totalEntries }: StreakWidgetProps) {
+export default function StreakWidget({ streak, weekDays }: StreakWidgetProps) {
   return (
     <div className="flex items-center justify-between rounded-xl border border-green-200 bg-white px-4 py-3">
       {/* Left: flame + streak */}
