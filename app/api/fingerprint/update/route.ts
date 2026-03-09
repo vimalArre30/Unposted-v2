@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
   // Fetch session linked to this entry
   const { data: session, error: sessionError } = await supabaseAdmin
-    .from('recording_sessions')
+    .from('sessions')
     .select('questions_asked, transcripts')
     .eq('entry_id', entryId)
     .eq('user_id', userId)
