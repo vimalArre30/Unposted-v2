@@ -3,25 +3,183 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #FDF8F0;
+  --foreground: #1a1a1a;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Prevent iOS zoom on input focus */
+input, textarea, select {
+  font-size: max(16px, 1rem);
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* ─── Animated gradient background — home & light pages ─── */
+@keyframes bgWaveShift {
+  0%   { background-position: 0% 50%, 100% 0%; }
+  100% { background-position: 100% 50%, 0% 100%; }
+}
+
+.bg-wave {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(168, 197, 160, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(253, 248, 240, 0.8) 0%, transparent 60%),
+    #FDF8F0;
+  background-size: 200% 200%, 200% 200%, 100% 100%;
+  animation: bgWaveShift 12s ease infinite alternate;
+}
+
+.bg-wave-dark {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(42, 92, 46, 0.22) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(42, 92, 46, 0.1) 0%, transparent 60%),
+    #f5f9f5;
+  background-size: 200% 200%, 200% 200%, 100% 100%;
+  animation: bgWaveShift 12s ease infinite alternate;
+}
+
+/* ─── Record screen — deep animated gradient ─── */
+@keyframes recordGradientShift {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+.bg-record {
+  background: linear-gradient(145deg, #1E3A1F 0%, #2A5C2E 35%, #3A6B3E 65%, #1E3A1F 100%);
+  background-size: 300% 300%;
+  animation: recordGradientShift 8s ease infinite;
+}
+
+/* ─── Glassmorphism — elevated ─── */
+.glass {
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(232, 228, 220, 0.5);
+  border-radius: 20px;
+}
+
+.glass-dark {
+  background: rgba(30, 58, 31, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(168, 197, 160, 0.15);
+  border-radius: 20px;
+}
+
+/* ─── Grain texture overlay ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+/* ─── Card — soft shadow, no hard border ─── */
+.card-soft {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* ─── Button — forest pill ─── */
+.btn-forest {
+  background: linear-gradient(160deg, #3a7a42 0%, #2A5C2E 100%);
+  border-radius: 9999px;
+  color: white;
+  font-weight: 500;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+.btn-forest:hover:not(:disabled) {
+  box-shadow: 0 0 20px rgba(74, 124, 89, 0.3);
+  transform: translateY(-1px);
+}
+.btn-forest:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.btn-forest:disabled {
+  opacity: 0.45;
+}
+
+/* ─── Slide-up utility ─── */
+.slide-up {
+  transform: translateY(100%);
+  transition: transform 0.3s ease-out;
+}
+.slide-up.active {
+  transform: translateY(0);
+}
+
+/* ─── Ambient floating particles (garden page) ─── */
+@keyframes floatUp {
+  0%   { transform: translateY(0)   rotate(0deg)   scale(1);   opacity: 0;   }
+  15%  { opacity: 0.18; }
+  85%  { opacity: 0.12; }
+  100% { transform: translateY(-80vh) rotate(25deg) scale(0.7); opacity: 0;   }
+}
+
+.garden-particle {
+  position: absolute;
+  pointer-events: none;
+  animation: floatUp linear infinite;
+}
+
+/* ─── Done page radial glow — sage tones ─── */
+@keyframes glowExpand {
+  0%   { opacity: 0.2; transform: scale(0.8); }
+  100% { opacity: 0.55; transform: scale(1.4); }
+}
+
+.done-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 38%, rgba(168, 197, 160, 0.55) 0%, rgba(253, 248, 240, 0.3) 45%, transparent 70%);
+  animation: glowExpand 3.5s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* ─── Progress bar shimmer ─── */
+@keyframes progressShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.progress-shimmer {
+  background: linear-gradient(90deg, #4A7C59 0%, #66BB6A 50%, #4A7C59 100%);
+  background-size: 200% 100%;
+  animation: progressShimmer 2s linear infinite;
+}
+
+/* ─── Mood pill hover ─── */
+.mood-pill {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.mood-pill:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+.mood-pill:active {
+  transform: scale(1.02);
+}
+
+/* ─── Hero gradient band ─── */
+.hero-gradient {
+  background: linear-gradient(180deg, rgba(168, 197, 160, 0.14) 0%, rgba(253, 248, 240, 0) 100%);
 }

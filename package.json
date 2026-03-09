@@ -11,6 +11,8 @@
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.98.0",
+    "framer-motion": "^12.35.0",
+    "html2canvas": "^1.4.1",
     "next": "14.2.35",
     "openai": "^6.25.0",
     "react": "^18",

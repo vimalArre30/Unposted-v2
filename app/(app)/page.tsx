@@ -1,32 +1,53 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import StreakWidget from '@/components/StreakWidget'
+import {
+  LeafIcon, MemoryIcon, PulseIcon, ClockIcon, ForwardIcon, VentIcon,
+} from '@/components/icons'
 
 const MODES = [
   {
     id: 'life-stories',
     label: 'Life Stories',
     sub: 'A memory worth keeping',
+    bg: 'rgba(255, 248, 238, 0.9)',
+    iconColor: '#b45309',
+    Icon: MemoryIcon,
   },
   {
     id: 'feeling-now',
     label: 'Feeling Right Now',
     sub: "What's alive in you",
+    bg: 'rgba(232, 245, 232, 0.9)',
+    iconColor: '#2d6a36',
+    Icon: PulseIcon,
   },
   {
     id: 'past-event',
     label: 'Something That Happened',
     sub: 'An event that stayed with you',
+    bg: 'rgba(235, 242, 255, 0.9)',
+    iconColor: '#2b4aab',
+    Icon: ClockIcon,
   },
   {
     id: 'future-event',
     label: 'Something Coming Up',
     sub: "What's ahead and what it stirs",
+    bg: 'rgba(244, 240, 255, 0.9)',
+    iconColor: '#5b3e9b',
+    Icon: ForwardIcon,
   },
   {
     id: 'vent',
     label: 'Just Vent',
     sub: 'No questions. Just you.',
+    bg: 'rgba(255, 240, 240, 0.9)',
+    iconColor: '#b54040',
+    Icon: VentIcon,
   },
 ] as const
 
@@ -37,70 +58,127 @@ function getGreeting() {
   return 'Good evening.'
 }
 
-function LeafIcon() {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-green-700"
-    >
-      <path d="M2 22 C2 22 8 16 12 12 C16 8 22 2 22 2 C22 2 16 4 12 8 C8 12 4 18 2 22Z" />
-      <path d="M12 12 L7 17" />
-    </svg>
-  )
-}
+type StreakData = { current_streak: number; week_days: boolean[]; total_entries: number }
 
-export default function HomePage() {
+function HomePageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const [entryCount, setEntryCount] = useState<number | null>(null)
+  const [streakData, setStreakData] = useState<StreakData | null>(null)
+
+  useEffect(() => {
+    const ref = searchParams.get('ref')
+    if (ref) {
+      fetch('/api/referral/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referralCode: ref }),
+      }).catch(() => {})
+    }
+
+    fetch('/api/entries/list')
+      .then((r) => r.json())
+      .then((data) => setEntryCount(data.entries?.length ?? 0))
+      .catch(() => setEntryCount(0))
+
+    fetch('/api/streak')
+      .then((r) => r.json())
+      .then((data) => setStreakData(data))
+      .catch(() => {})
+  }, [searchParams])
 
   return (
-    <div className="flex min-h-screen flex-col px-6 pb-10 pt-12">
-      {/* Wordmark + leaf */}
-      <div className="flex items-center gap-2 mb-1">
-        <LeafIcon />
-        <span className="text-lg font-semibold tracking-tight text-gray-900">
-          unposted
-        </span>
+    <div className="flex min-h-screen flex-col pb-24">
+
+      {/* Hero band — sage → cream gradient */}
+      <div className="hero-gradient px-6 pb-6 pt-12">
+        {/* Wordmark row */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2">
+            <LeafIcon size={20} className="text-moss" />
+            <span className="text-base font-semibold tracking-wide text-forest">
+              unposted
+            </span>
+          </div>
+          {entryCount !== null && entryCount > 0 && (
+            <Link
+              href="/entries"
+              className="text-xs text-gray-400 hover:text-moss transition-colors rounded-full bg-white/70 px-3 py-1 shadow-card"
+            >
+              {entryCount} {entryCount === 1 ? 'entry' : 'entries'}
+            </Link>
+          )}
+        </div>
+
+        {/* Greeting */}
+        <h1 className="text-4xl font-semibold leading-tight tracking-tight text-gray-900">
+          {getGreeting()}
+          <br />
+          <span className="text-gray-400 font-normal text-2xl leading-relaxed">
+            What&apos;s alive in you today?
+          </span>
+        </h1>
+
+        {/* Streak — woven into hero */}
+        {streakData && (
+          <div className="mt-6">
+            <StreakWidget
+              streak={streakData.current_streak}
+              weekDays={streakData.week_days}
+              totalEntries={streakData.total_entries}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Greeting */}
-      <p className="mt-6 text-3xl font-semibold text-gray-900 leading-tight">
-        {getGreeting()}
-        <br />
-        <span className="text-gray-400 font-normal text-2xl">
-          What do you want to explore?
-        </span>
-      </p>
-
       {/* Mode cards */}
-      <div className="mt-8 flex flex-col gap-3">
+      <div className="px-5 mt-2 flex flex-col gap-3">
         {MODES.map((mode) => (
           <button
             key={mode.id}
             onClick={() => router.push(`/record?mode=${mode.id}`)}
-            className="w-full rounded-2xl border border-gray-100 bg-white px-5 py-4 text-left shadow-sm transition-all active:scale-[0.98] hover:border-green-200 hover:shadow-md"
+            className="w-full rounded-[20px] px-5 py-4 text-left transition-all duration-150 active:scale-[0.98] hover:shadow-soft min-h-[44px]"
+            style={{
+              backgroundColor: mode.bg,
+              boxShadow: '0 2px 14px rgba(0,0,0,0.04)',
+            }}
           >
-            <p className="text-base font-medium text-gray-900">{mode.label}</p>
-            <p className="mt-0.5 text-sm text-gray-400">{mode.sub}</p>
+            <div className="flex items-center gap-3">
+              <span style={{ color: mode.iconColor }}>
+                <mode.Icon size={20} />
+              </span>
+              <div>
+                <p className="text-base font-medium text-gray-900 leading-snug">{mode.label}</p>
+                <p className="mt-0.5 text-sm text-gray-400">{mode.sub}</p>
+              </div>
+            </div>
           </button>
         ))}
       </div>
 
       {/* Quote badge */}
-      <div className="mt-auto pt-10">
-        <div className="rounded-2xl bg-green-50 px-5 py-4">
-          <p className="text-sm text-green-800 leading-relaxed italic">
+      <div className="mt-auto px-5 pt-8 pb-2">
+        <div className="rounded-[20px] bg-white/60 px-5 py-4 shadow-card">
+          <p className="text-sm text-gray-500 leading-relaxed italic">
             &quot;The act of writing is the act of discovering what you believe.&quot;
           </p>
-          <p className="mt-1.5 text-xs text-green-600">— David Hare</p>
+          <p className="mt-1.5 text-xs text-moss">— David Hare</p>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-2 w-2 animate-pulse rounded-full bg-moss" />
+        </div>
+      }
+    >
+      <HomePageInner />
+    </Suspense>
   )
 }

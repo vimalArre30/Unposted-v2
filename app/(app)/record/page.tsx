@@ -4,6 +4,8 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import VoiceRecorder from '@/components/VoiceRecorder'
+import { BackIcon } from '@/components/icons'
+import { motion } from 'framer-motion'
 
 type Message = { role: 'assistant' | 'user'; content: string }
 
@@ -26,13 +28,12 @@ function RecordPageInner() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Number of user answers submitted so far
   const userTurns = conversation.filter((m) => m.role === 'user').length
   const progress = Math.min(userTurns, 6)
+  const progressPct = (progress / 6) * 100
 
   useEffect(() => {
     async function init() {
-      // Create session
       const sessionRes = await fetch('/api/sessions/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,10 +42,7 @@ function RecordPageInner() {
       const { sessionId: sid } = await sessionRes.json()
       setSessionId(sid)
 
-      // Fetch emotion fingerprint
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
 
       let fp: object | null = null
       if (user) {
@@ -57,7 +55,6 @@ function RecordPageInner() {
         setFingerprint(fp)
       }
 
-      // First question
       await fetchNextQuestion([], fp, sid)
       setIsInitializing(false)
     }
@@ -66,11 +63,7 @@ function RecordPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function fetchNextQuestion(
-    conv: Message[],
-    fp: object | null,
-    sid: string | null
-  ) {
+  async function fetchNextQuestion(conv: Message[], fp: object | null, sid: string | null) {
     setIsFetching(true)
     const res = await fetch('/api/questions/next', {
       method: 'POST',
@@ -86,7 +79,12 @@ function RecordPageInner() {
     setIsFetching(false)
 
     if (data.done) {
-      router.push(`/record/mood?sessionId=${sid ?? sessionId}`)
+      const resolvedId = sid ?? sessionId
+      if (!resolvedId) {
+        console.error('sessionId is null at wrap-up — cannot navigate to mood screen')
+        return
+      }
+      router.push(`/record/mood?sessionId=${resolvedId}`)
       return
     }
 
@@ -107,18 +105,13 @@ function RecordPageInner() {
     setConversation(updatedConv)
     setAnswer('')
 
-    // Persist progress to session
     fetch('/api/sessions/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sessionId,
-        questionsAsked: updatedConv
-          .filter((m) => m.role === 'assistant')
-          .map((m) => m.content),
-        transcripts: updatedConv
-          .filter((m) => m.role === 'user')
-          .map((m) => m.content),
+        questionsAsked: updatedConv.filter((m) => m.role === 'assistant').map((m) => m.content),
+        transcripts: updatedConv.filter((m) => m.role === 'user').map((m) => m.content),
       }),
     })
 
@@ -127,59 +120,79 @@ function RecordPageInner() {
 
   if (isInitializing) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-green-500" />
+      <div className="flex min-h-screen items-center justify-center bg-record">
+        <div className="h-2 w-2 animate-pulse rounded-full bg-white/60" />
       </div>
     )
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col px-6 pb-10 pt-14">
-      {/* Back */}
-      <button
-        onClick={() => router.push('/')}
-        className="absolute left-5 top-5 text-sm text-gray-400 hover:text-gray-700"
-      >
-        ← Back
-      </button>
+    <div className="relative flex min-h-screen flex-col bg-record">
 
-      {/* Progress dots */}
-      <div className="mb-14 flex justify-center gap-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
-              i < progress ? 'bg-green-600' : 'bg-gray-200'
-            }`}
-          />
-        ))}
+      {/* Progress bar — thin line at very top */}
+      <div className="absolute top-0 inset-x-0 h-0.5 bg-white/10 z-10">
+        <motion.div
+          className="h-full progress-shimmer"
+          animate={{ width: `${progressPct}%` }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        />
       </div>
 
-      {/* Question + input */}
-      <div className="flex flex-1 flex-col items-center gap-6">
-        {/* Pulsing indicator */}
-        <div className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse" />
+      {/* Back button */}
+      <button
+        onClick={() => router.push('/')}
+        className="absolute left-5 top-5 flex items-center gap-1.5 text-sm text-white/60 hover:text-white/90 transition-colors min-h-[44px] z-10"
+      >
+        <BackIcon size={16} />
+        <span>Back</span>
+      </button>
+
+      {/* Progress label */}
+      <div className="pt-5 flex justify-end px-6">
+        <span className="text-xs text-white/40 tabular-nums">{progress}/6</span>
+      </div>
+
+      {/* Content area */}
+      <div className="flex flex-1 flex-col items-center px-6 pb-10 pt-10 gap-6">
+
+        {/* Pulsing dot */}
+        <div className="h-2 w-2 rounded-full bg-sage/80 animate-pulse" />
 
         {/* Question text */}
-        <p className="text-center text-2xl font-medium leading-snug text-gray-900 px-2 min-h-[4rem]">
+        <motion.p
+          key={currentQuestion}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="text-center text-[1.45rem] font-medium leading-relaxed text-white/95 px-2 min-h-[5rem] text-balance"
+        >
           {isFetching ? (
-            <span className="text-gray-300">...</span>
+            <span className="text-white/30">thinking…</span>
           ) : (
             currentQuestion
           )}
-        </p>
+        </motion.p>
 
-        {/* Voice Recorder */}
-        <VoiceRecorder
-          key={recorderKey}
-          onTranscript={(t) => setAnswer(t)}
-        />
+        {/* Personalisation indicator */}
+        {((fingerprint as { entry_count?: number } | null)?.entry_count ?? 0) >= 3 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/70 border border-white/10">
+            ✦ Tailored to you
+          </span>
+        )}
+
+        {/* Voice recorder — glass card wrapper */}
+        <div className="w-full glass-dark px-5 py-5 mt-2">
+          <VoiceRecorder
+            key={recorderKey}
+            onTranscript={(t) => setAnswer(t)}
+          />
+        </div>
 
         {/* Text fallback toggle */}
         {!showTextInput ? (
           <button
             onClick={() => setShowTextInput(true)}
-            className="text-xs text-gray-400 underline underline-offset-2 hover:text-gray-600"
+            className="text-xs text-white/40 underline underline-offset-4 hover:text-white/70 transition-colors"
           >
             Type instead
           </button>
@@ -192,24 +205,24 @@ function RecordPageInner() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleContinue()
               }}
-              placeholder="Write here..."
+              placeholder="Write here…"
               rows={4}
-              className="w-full resize-none rounded-2xl border-2 border-green-600 bg-white px-4 py-3 text-base text-gray-800 placeholder-gray-300 focus:outline-none"
+              className="w-full resize-none rounded-[16px] bg-white/10 border border-white/20 px-4 py-3 text-base text-white placeholder-white/30 focus:outline-none focus:border-white/40 transition-colors"
             />
             <button
               onClick={() => setShowTextInput(false)}
-              className="text-xs text-gray-400 underline underline-offset-2 hover:text-gray-600 self-center"
+              className="text-xs text-white/40 underline underline-offset-4 hover:text-white/70 self-center transition-colors"
             >
               Use mic instead
             </button>
           </div>
         )}
 
-        {/* Continue */}
+        {/* Continue button */}
         <button
           onClick={handleContinue}
           disabled={!answer.trim() || isFetching}
-          className="w-full rounded-2xl bg-green-700 py-3.5 text-base font-medium text-white transition-opacity disabled:opacity-40"
+          className="w-full btn-forest py-4 text-base"
         >
           Continue
         </button>
@@ -222,8 +235,8 @@ export default function RecordPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-green-500" />
+        <div className="flex min-h-screen items-center justify-center bg-record">
+          <div className="h-2 w-2 animate-pulse rounded-full bg-white/60" />
         </div>
       }
     >

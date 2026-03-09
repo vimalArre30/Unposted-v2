@@ -25,18 +25,22 @@ export async function POST(req: NextRequest) {
 
   // After 4+ exchanges (8+ messages), check if it's time to wrap up
   if (conversationSoFar.length >= 8) {
-    const wrapCheck = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'You are evaluating a journaling conversation.' },
-        ...conversationSoFar,
-        { role: 'user', content: 'Is this a natural point to move to the mood check? Reply only YES or NO.' },
-      ],
-      max_tokens: 3,
-    })
-    const answer = wrapCheck.choices[0]?.message?.content?.trim().toUpperCase()
-    if (answer === 'YES') {
-      return NextResponse.json({ done: true })
+    try {
+      const wrapCheck = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: 'You are evaluating a journaling conversation.' },
+          ...conversationSoFar,
+          { role: 'user', content: 'Is this a natural point to move to the mood check? Reply only YES or NO.' },
+        ],
+        max_tokens: 3,
+      })
+      const answer = wrapCheck.choices[0]?.message?.content?.trim().toUpperCase() ?? ''
+      if (answer.startsWith('YES')) {
+        return NextResponse.json({ done: true })
+      }
+    } catch (err) {
+      console.error('Wrap-up detection failed, falling through to next question:', err)
     }
   }
 
@@ -46,9 +50,21 @@ ${STYLE_RULES}
 Mode arc for this session (${mode}): ${modeArc}`
 
   if (fingerprint) {
-    const themes = (fingerprint as Record<string, string[]>).recurring_themes?.join(', ') || 'not yet known'
-    const emotions = (fingerprint as Record<string, string[]>).dominant_emotions?.join(', ') || 'not yet known'
-    systemPrompt += `\n\nThis user's recurring themes are: ${themes}. Their recent emotional signals: ${emotions}. Tailor your questions gently to feel personal without being assumptive.`
+    const fp = fingerprint as Record<string, unknown>
+    const themes = (fp.themes as string[] | undefined)?.filter(Boolean) ?? []
+    const emotions = (fp.dominant_emotions as string[] | undefined)?.filter(Boolean) ?? []
+    const entryCount = (fp.entry_count as number | undefined) ?? 0
+
+    if (themes.length > 0 || emotions.length > 0) {
+      const themeStr = themes.length > 0 ? themes.join(', ') : 'not yet known'
+      const emotionStr = emotions.length > 0 ? emotions.join(', ') : 'not yet known'
+
+      systemPrompt += `\n\nGently weave in awareness of this person's context: themes like ${themeStr}, recent emotional patterns like ${emotionStr}. Do NOT reference these explicitly in your question — let them inform the angle and depth.`
+
+      if (entryCount >= 2 && themes.length > 0) {
+        systemPrompt += ` This person has journaled ${entryCount} times — explore a different theme or angle first before returning to their most prominent one. Avoid repetition; bring breadth.`
+      }
+    }
   }
 
   systemPrompt += '\n\nReturn ONLY the next question as plain text. No JSON. No preamble. No explanation.'
