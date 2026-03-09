@@ -22,12 +22,13 @@ export async function POST(req: NextRequest) {
 
   // Fetch session
   const { data: session, error: sessionError } = await supabase
-    .from('recording_sessions')
+    .from('sessions')
     .select('current_mode, questions_asked, transcripts')
     .eq('id', sessionId)
     .single()
 
   if (sessionError || !session) {
+    console.error('entries/create: session fetch failed', sessionError)
     return NextResponse.json({ error: 'Session not found' }, { status: 404 })
   }
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   // Update session
   await supabase
-    .from('recording_sessions')
+    .from('sessions')
     .update({ entry_id: entry.id, status: 'complete' })
     .eq('id', sessionId)
 
