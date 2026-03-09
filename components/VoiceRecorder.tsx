@@ -197,8 +197,9 @@ export default function VoiceRecorder({ onTranscript }: VoiceRecorderProps) {
         <button
           onClick={startRecording}
           aria-label="Start recording"
-          className="relative flex h-20 w-20 items-center justify-center rounded-full bg-green-700 text-white shadow-lg
-            before:absolute before:inset-0 before:rounded-full before:bg-green-700 before:opacity-30
+          className="relative flex h-[72px] w-[72px] items-center justify-center rounded-full bg-green-700 text-white shadow-lg
+            transition-transform duration-150 hover:scale-105 active:scale-95
+            before:absolute before:inset-0 before:rounded-full before:bg-green-600 before:opacity-60
             before:animate-ping"
         >
           <MicIcon />
@@ -251,7 +252,7 @@ export default function VoiceRecorder({ onTranscript }: VoiceRecorderProps) {
 
       {/* DONE */}
       {state === 'done' && transcript && (
-        <div className="w-full rounded-2xl border-2 border-green-600 bg-white px-4 py-3 text-base text-gray-800 leading-relaxed">
+        <div className="glass w-full px-4 py-3 text-base text-gray-800 leading-relaxed border-green-200">
           {transcript}
         </div>
       )}
