@@ -62,7 +62,7 @@ export default function GardenPage() {
       .then((data: { entries: LeafEntry[] }) => {
         setEntries(data.entries ?? [])
         if ((data.entries ?? []).length === 0) {
-          const seen = localStorage.getItem('hasSeenCarousel')
+          const seen = localStorage.getItem('unposted_carousel_seen')
           if (!seen) setShowCarousel(true)
         }
       })
@@ -82,7 +82,7 @@ export default function GardenPage() {
   }, [])
 
   function handleCloseCarousel() {
-    localStorage.setItem('hasSeenCarousel', '1')
+    localStorage.setItem('unposted_carousel_seen', '1')
     setShowCarousel(false)
   }
 

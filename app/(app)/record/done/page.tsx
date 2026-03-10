@@ -6,6 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import LifeTree, { type LeafEntry } from '@/components/LifeTree'
 import SharePrompt, { shouldShowSharePrompt } from '@/components/SharePrompt'
 import ChecklistCard from '@/components/ChecklistCard'
+import FirstEntryGate from '@/components/FirstEntryGate'
+import AnonPersistBanner from '@/components/AnonPersistBanner'
+import { useSession } from '@/hooks/useSession'
 
 function formatFriendlyDate(date: Date) {
   return date.toLocaleDateString('en-GB', {
@@ -90,6 +93,7 @@ function DonePageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const entryId = searchParams.get('entryId')
+  const { isAnonymous } = useSession()
 
   const [reflection, setReflection] = useState<string | null>(null)
   const [cardVisible, setCardVisible] = useState(false)
@@ -100,6 +104,8 @@ function DonePageInner() {
   const [burstDone, setBurstDone] = useState(false)
   const [checklist, setChecklist] = useState<{ emotional: string[]; utility: string[] } | null>(null)
   const [checklistLoading, setChecklistLoading] = useState(false)
+  const [totalEntries, setTotalEntries] = useState<number | null>(null)
+  const [gateDismissed, setGateDismissed] = useState(false)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -111,6 +117,7 @@ function DonePageInner() {
         const entries = data.entries ?? []
         const match = entries.find((e) => e.id === entryId) ?? entries[0] ?? null
         setFreshEntry(match)
+        setTotalEntries(entries.length)
         if (entries.length >= 3 && shouldShowSharePrompt()) {
           setShowSharePrompt(true)
         }
@@ -269,6 +276,19 @@ function DonePageInner() {
       >
         Saved ✓
       </div>
+
+      {/* Anonymous user — first entry: full-screen gate */}
+      {isAnonymous && totalEntries === 1 && !gateDismissed && (
+        <FirstEntryGate
+          moodWord={freshEntry?.mood_word}
+          onDismiss={() => setGateDismissed(true)}
+        />
+      )}
+
+      {/* Anonymous user — returning: slim persistent banner */}
+      {isAnonymous && totalEntries !== null && totalEntries > 1 && (
+        <AnonPersistBanner />
+      )}
     </div>
   )
 }
