@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useSession } from '@/hooks/useSession'
+import AuthModal from '@/components/AuthModal'
 
 interface Profile {
   username: string | null
@@ -13,14 +15,22 @@ interface Profile {
 
 export default function AccountPage() {
   const router = useRouter()
+  const { isAnonymous, isLoading: sessionLoading } = useSession()
   const supabase = createClient()
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(true)
 
   useEffect(() => {
+    if (sessionLoading || isAnonymous) return
+
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/auth/login'); return }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) {
+        router.replace('/auth/login')
+        return
+      }
 
       const { data } = await supabase
         .from('profiles')
@@ -29,17 +39,27 @@ export default function AccountPage() {
         .single()
 
       setProfile(data ?? null)
-      setIsLoading(false)
+      setProfileLoading(false)
     }
     load()
-  }, [router, supabase])
+  }, [router, supabase, sessionLoading, isAnonymous])
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/auth/login')
+  // Wait for session to resolve
+  if (sessionLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-green-500" />
+      </div>
+    )
   }
 
-  if (isLoading) {
+  // Anonymous user — show auth UI instead of a blank/dummy profile
+  if (isAnonymous) {
+    return <AuthModal />
+  }
+
+  // Authenticated user loading their profile data
+  if (profileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-green-500" />
@@ -93,7 +113,10 @@ export default function AccountPage() {
 
       <div className="mt-auto pt-10">
         <button
-          onClick={handleLogout}
+          onClick={async () => {
+            await supabase.auth.signOut()
+            router.push('/auth/login')
+          }}
           className="w-full rounded-2xl border border-gray-200 py-3.5 text-base font-medium text-gray-600 transition-colors hover:border-red-200 hover:text-red-600"
         >
           Log out

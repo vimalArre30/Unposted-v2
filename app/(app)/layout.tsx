@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import PageTransition from '@/components/PageTransition'
 import { HomeIcon, EntriesIcon, GardenIcon, ChecklistIcon } from '@/components/icons'
+import { useSession } from '@/hooks/useSession'
 
 const NAV = [
   { href: '/',           label: 'Home',      Icon: HomeIcon      },
@@ -15,6 +16,7 @@ const NAV = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { isAnonymous } = useSession()
   const [hasInsightBadge, setHasInsightBadge] = useState(false)
 
   useEffect(() => {
@@ -74,7 +76,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   ? 'bg-white/12 text-white'
                   : 'text-white/60 hover:bg-white/08 hover:text-white/90'
               }`}>
-              <PersonIcon />
+              <span className="relative">
+                <PersonIcon />
+                {isAnonymous && <LockBadge />}
+              </span>
               Account
             </Link>
           </div>
@@ -94,8 +99,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {!isAuthPage && (
         <div className="md:hidden fixed top-4 right-4 z-40">
           <Link href="/account" aria-label="Account"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/85 backdrop-blur-sm text-gray-500 shadow-soft">
+            className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/85 backdrop-blur-sm text-gray-500 shadow-soft">
             <PersonIcon />
+            {isAnonymous && <LockBadge />}
           </Link>
         </div>
       )}
@@ -147,5 +153,16 @@ function PersonIcon() {
       <circle cx="12" cy="8" r="4" />
       <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
     </svg>
+  )
+}
+
+function LockBadge() {
+  return (
+    <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white shadow-sm">
+      <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
+        <rect x="2" y="5" width="8" height="6" rx="1.5" fill="#6b7280" />
+        <path d="M4 5V3.5a2 2 0 0 1 4 0V5" stroke="#6b7280" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    </span>
   )
 }
