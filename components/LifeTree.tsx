@@ -30,63 +30,132 @@ function getStage(n: number): Stage {
   return 'big-tree'
 }
 
-function idOff(id: string, salt: number, range = 5): number {
+// Deterministic jitter from entry id + salt
+function idInt(id: string, salt: number, min: number, max: number): number {
   let h = salt
   for (const c of id) h = (h * 31 + c.charCodeAt(0)) & 0xffffff
-  return ((h % (range * 2 + 1)) - range)
+  return min + (Math.abs(h) % (max - min + 1))
 }
 
-const CX = 140
-const GROUND = 222
+// ── Geometry ─────────────────────────────────────────────────────────────────
 
-const SLOTS: Record<Stage, [number, number][]> = {
-  empty: [],
-  sapling: [
-    [140, 174], [131, 181], [149, 181],
-    [124, 170], [156, 170], [140, 163],
-  ],
+const CX = 180       // trunk centre x
+const GROUND_Y = 326 // y where trunk meets ground
+
+// [topY, baseHalfWidth, topHalfWidth]
+const TRUNK: Record<Stage, [number, number, number]> = {
+  empty:        [GROUND_Y, 0,  0 ],
+  sapling:      [278,      7,  4 ],
+  plant:        [248,      10, 6 ],
+  'small-tree': [212,      13, 8 ],
+  'big-tree':   [172,      18, 10],
+}
+
+// [x1, y1, x2, y2, strokeWidth]
+type Seg = [number, number, number, number, number]
+
+const BRANCHES: Record<Stage, Seg[]> = {
+  empty:   [],
+  sapling: [],
   plant: [
-    [138, 144], [144, 138], [132, 132], [148, 132], [140, 126],
-    [120, 154], [105, 140], [93, 129], [85, 120],
-    [160, 154], [175, 140], [187, 129], [195, 120],
-    [128, 165], [152, 165],
+    [177, 250, 108, 228, 8],  // left
+    [183, 250, 252, 228, 8],  // right
   ],
   'small-tree': [
-    [140, 83], [132, 77], [148, 77], [124, 72], [156, 72],
-    [136, 66], [144, 66], [140, 60],
-    [122, 191], [107, 177], [91, 163], [77, 151], [67, 139],
-    [158, 191], [173, 177], [189, 163], [203, 151], [213, 139],
-    [120, 137], [106, 123], [92, 111], [82, 101],
-    [160, 137], [174, 123], [188, 111], [198, 101],
-    [130, 161], [150, 161], [127, 179], [153, 179], [135, 149], [145, 149], [140, 172],
+    [174, 252, 52,  285, 10], // far left
+    [175, 232, 86,  210, 9],  // left mid
+    [177, 215, 112, 172, 8],  // left upper
+    [178, 202, 148, 132, 7],  // center-left
+    [182, 202, 212, 132, 7],  // center-right
+    [183, 215, 248, 172, 8],  // right upper
+    [185, 232, 274, 210, 9],  // right mid
+    [186, 252, 308, 285, 10], // far right
   ],
   'big-tree': [
-    [140, 26], [130, 20], [150, 20], [120, 16], [160, 16],
-    [136, 11], [144, 11], [128, 7], [152, 7], [140, 4],
-    [118, 184], [100, 168], [82, 154], [68, 140], [56, 126], [46, 114],
-    [162, 184], [180, 168], [198, 154], [212, 140], [224, 126], [234, 114],
-    [120, 129], [104, 113], [88, 99], [76, 87],
-    [160, 129], [176, 113], [192, 99], [204, 87],
-    [126, 69], [112, 57], [100, 47],
-    [154, 69], [168, 57], [180, 47],
-    [130, 152], [150, 152], [128, 170], [152, 170], [126, 188], [154, 188],
-    [134, 33], [146, 33], [138, 40], [142, 40],
+    [173, 258, 12,  295, 13], // far-left near-horizontal
+    [174, 232, 44,  224, 11], // left mid
+    [175, 212, 70,  165, 10], // left upper
+    [70,  165, 40,  134, 7],  // left upper secondary
+    [177, 196, 116, 114, 9],  // center-left
+    [116, 114, 86,  84,  7],  // center-left secondary
+    [179, 183, 150, 76,  8],  // top-left
+    [181, 183, 210, 76,  8],  // top-right
+    [183, 196, 244, 114, 9],  // center-right
+    [244, 114, 274, 84,  7],  // center-right secondary
+    [185, 212, 290, 165, 10], // right upper
+    [290, 165, 320, 134, 7],  // right upper secondary
+    [186, 232, 316, 224, 11], // right mid
+    [187, 258, 348, 295, 13], // far-right near-horizontal
   ],
 }
 
-const TRUNK: Record<Stage, { height: number; width: number }> = {
-  empty:        { height: 0,   width: 0  },
-  sapling:      { height: 42,  width: 3  },
-  plant:        { height: 82,  width: 5  },
-  'small-tree': { height: 142, width: 8  },
-  'big-tree':   { height: 202, width: 13 },
+// Leaf slot positions [x, y] per stage
+const LEAF_SLOTS: Record<Stage, [number, number][]> = {
+  empty: [],
+  sapling: [
+    [180, 270], [172, 264], [188, 264],
+    [163, 270], [197, 270], [178, 258],
+  ],
+  plant: [
+    [100, 222], [110, 228], [93,  228], [114, 220], // left tip
+    [248, 222], [258, 228], [243, 228], [252, 220], // right tip
+    [132, 228], [146, 225],                          // left mid
+    [214, 228], [228, 225],                          // right mid
+    [180, 244], [173, 238],                          // trunk top
+  ],
+  'small-tree': [
+    [44,  279], [58,  287], [38,  273], [56,  274],       // far left
+    [80,  204], [92,  212], [76,  212],                    // left mid
+    [106, 167], [118, 163], [102, 174],                    // left upper
+    [142, 126], [152, 120], [138, 132],                    // center-left
+    [218, 126], [208, 120], [222, 132],                    // center-right
+    [244, 167], [256, 163], [250, 174],                    // right upper
+    [270, 204], [282, 212], [274, 212],                    // right mid
+    [304, 279], [316, 287], [298, 273], [310, 274],        // far right
+    [180, 196], [172, 188], [188, 188], [165, 184],        // top area
+  ],
+  'big-tree': [
+    // Far-left cluster
+    [6,   288], [18,  298], [12,  282], [26,  292], [14,  302],
+    // Left mid cluster
+    [36,  218], [50,  226], [44,  212],
+    // Left upper cluster
+    [62,  158], [74,  165], [66,  172], [56,  163],
+    // Left upper secondary cluster
+    [33,  128], [48,  124], [40,  136],
+    // Center-left cluster
+    [110, 108], [120, 114], [106, 120],
+    // Center-left secondary cluster
+    [80,  78],  [90,  85],  [84,  92],
+    // Top-left cluster
+    [142, 70],  [154, 77],  [146, 82],  [158, 67],
+    // Top-right cluster
+    [202, 70],  [214, 77],  [207, 82],  [220, 67],
+    // Center-right cluster
+    [240, 108], [250, 114], [254, 120],
+    // Center-right secondary cluster
+    [270, 78],  [280, 85],  [274, 92],
+    // Right upper cluster
+    [284, 158], [296, 165], [288, 172], [302, 163],
+    // Right upper secondary cluster
+    [314, 128], [328, 124], [320, 136],
+    // Right mid cluster
+    [310, 218], [322, 226], [316, 212],
+    // Far-right cluster
+    [342, 288], [354, 298], [347, 282], [358, 292], [345, 302],
+  ],
 }
 
-export default function LifeTree({ entries, totalEntries, onLeafTap, fingerprint }: LifeTreeProps) {
+// Grass tuft x-positions at trunk base
+const GRASS_X = [138, 152, 163, 173, 181, 190, 200, 211, 223]
+
+// ── Component ────────────────────────────────────────────────────────────────
+
+export default function LifeTree({ entries, totalEntries, onLeafTap }: LifeTreeProps) {
   const stage = getStage(totalEntries)
-  const slots = SLOTS[stage]
-  const { height: th, width: tw } = TRUNK[stage]
-  const trunkTop = GROUND - th
+  const slots = LEAF_SLOTS[stage]
+  const segs = BRANCHES[stage]
+  const [topY, baseHW, topHW] = TRUNK[stage]
   const ordered = [...entries].reverse()
 
   const newestId = entries[0]?.id
@@ -95,147 +164,110 @@ export default function LifeTree({ entries, totalEntries, onLeafTap, fingerprint
     : Infinity
   const hasFreshLeaf = newestAge < 300
 
-  // Widen branches if fingerprint has 3+ relationship contexts
-  const wideSpread = (fingerprint?.relationship_contexts?.length ?? 0) >= 3
-  const spreadMult = wideSpread ? 1.22 : 1.0
-
-  // Root depth proportional to entry count, 12–42px range
-  const rootLen = stage === 'empty' ? 0 : Math.max(12, Math.min((totalEntries / 50) * 42, 42))
-
   if (stage === 'empty') {
     return (
-      <svg viewBox="0 0 280 280" className="w-full max-w-[280px]">
-        <text x="140" y="210" textAnchor="middle" fill="#9CA3AF" fontSize="13">
+      <svg viewBox="0 0 360 380" className="w-full max-w-[280px]">
+        <text x="180" y="240" textAnchor="middle" fill="#9CA3AF" fontSize="14">
           Plant your first seed 🌱
         </text>
       </svg>
     )
   }
 
-  type Branch = [number, number, number, number]
-  const branches: Branch[] = []
-  if (stage === 'plant' || stage === 'small-tree' || stage === 'big-tree') {
-    const bY = GROUND - th * 0.58
-    const ex = 44 * spreadMult
-    branches.push([bY, CX - ex, GROUND - th * 0.80, tw * 0.52])
-    branches.push([bY, CX + ex, GROUND - th * 0.80, tw * 0.52])
-  }
-  if (stage === 'small-tree' || stage === 'big-tree') {
-    const bY = GROUND - th * 0.78
-    const ex = 58 * spreadMult
-    branches.push([bY, CX - ex, GROUND - th * 0.93, tw * 0.40])
-    branches.push([bY, CX + ex, GROUND - th * 0.93, tw * 0.40])
-  }
-  if (stage === 'big-tree') {
-    const bY = GROUND - th * 0.88
-    const ex = 24 * spreadMult
-    branches.push([bY, CX - ex, GROUND - th * 0.97, tw * 0.28])
-    branches.push([bY, CX + ex, GROUND - th * 0.97, tw * 0.28])
-  }
-
-  // Canopy centre for glow
-  const canopyY = trunkTop + (th * 0.35)
+  const trunkH = GROUND_Y - topY
+  const trunkPath = [
+    `M ${CX - baseHW} ${GROUND_Y}`,
+    `C ${CX - baseHW} ${GROUND_Y - trunkH * 0.3}`,
+    `  ${CX - topHW - 1} ${topY + trunkH * 0.25}`,
+    `  ${CX - topHW} ${topY}`,
+    `L ${CX + topHW} ${topY}`,
+    `C ${CX + topHW + 1} ${topY + trunkH * 0.25}`,
+    `  ${CX + baseHW} ${GROUND_Y - trunkH * 0.3}`,
+    `  ${CX + baseHW} ${GROUND_Y} Z`,
+  ].join(' ')
 
   return (
-    <svg viewBox="0 0 280 280" className="w-full max-w-[280px]">
+    <svg viewBox="0 0 360 380" className="w-full max-w-[280px]">
       <defs>
-        <radialGradient id="canopyGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%"   stopColor="#2D6A2D" stopOpacity="0.08" />
-          <stop offset="100%" stopColor="#2D6A2D" stopOpacity="0"    />
-        </radialGradient>
         <style>{`
           @keyframes leafIn {
             from { transform: scale(0); opacity: 0; }
             to   { transform: scale(1); opacity: 1; }
           }
           @keyframes leafSway {
-            0%, 100% { transform: rotate(-2deg); }
-            50%      { transform: rotate(2deg);  }
+            0%, 100% { transform: rotate(-1.8deg); }
+            50%       { transform: rotate(1.8deg); }
           }
         `}</style>
       </defs>
 
-      {/* Canopy glow */}
-      <ellipse
-        cx={CX}
-        cy={canopyY}
-        rx={Math.min(th * 0.55, 72)}
-        ry={Math.min(th * 0.50, 65)}
-        fill="url(#canopyGlow)"
-      />
+      {/* Ground hill */}
+      <ellipse cx="180" cy="368" rx="215" ry="50" fill="#DFF0D8" />
+      <ellipse cx="75"  cy="355" rx="105" ry="34" fill="#D0EAC5" opacity="0.55" />
 
-      {/* Ground */}
-      <line x1="55" y1={GROUND} x2="225" y2={GROUND}
-        stroke="#D1FAE5" strokeWidth="1.5" strokeLinecap="round" />
+      {/* Branches — before trunk so trunk covers their roots */}
+      {segs.map(([x1, y1, x2, y2, w], i) => (
+        <line
+          key={i}
+          x1={x1} y1={y1} x2={x2} y2={y2}
+          stroke="#3A2010"
+          strokeWidth={w}
+          strokeLinecap="round"
+        />
+      ))}
 
-      {/* Roots — length proportional to entry count */}
-      <path
-        d={`M ${CX} ${GROUND} Q ${CX - 18} ${GROUND + rootLen * 0.55} ${CX - rootLen * 0.82} ${GROUND + rootLen}`}
-        stroke="#8B6914" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.4" />
-      <path
-        d={`M ${CX} ${GROUND} Q ${CX + 2} ${GROUND + rootLen * 0.48} ${CX + 2} ${GROUND + rootLen}`}
-        stroke="#8B6914" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.35" />
-      <path
-        d={`M ${CX} ${GROUND} Q ${CX + 18} ${GROUND + rootLen * 0.55} ${CX + rootLen * 0.82} ${GROUND + rootLen}`}
-        stroke="#8B6914" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.4" />
+      {/* Trunk — filled tapered polygon drawn over branch roots */}
+      <path d={trunkPath} fill="#3A2010" />
 
-      {/* Trunk */}
-      <path
-        d={`M ${CX} ${GROUND} C ${CX + 4} ${GROUND - th * 0.38} ${CX - 3} ${GROUND - th * 0.68} ${CX} ${trunkTop}`}
-        stroke="#8B7355"
-        strokeWidth={tw}
-        fill="none"
-        strokeLinecap="round"
-      />
-
-      {/* Branches */}
-      {branches.map(([fromY, ex, ey, bw], i) => {
-        const side = i % 2 === 0 ? -1 : 1
-        const cpx = CX + side * tw * 1.2
+      {/* Grass tufts at trunk base */}
+      {GRASS_X.map((gx, i) => {
+        const h = 10 + (i % 3) * 5
+        const tilt = i % 2 === 0 ? -1 : 1
         return (
-          <path
-            key={i}
-            d={`M ${CX} ${fromY} Q ${cpx} ${(fromY + ey) / 2} ${ex} ${ey}`}
-            stroke="#8B7355"
-            strokeWidth={Math.max(bw, 1.5)}
-            fill="none"
-            strokeLinecap="round"
-          />
+          <g key={i} transform={`translate(${gx}, ${GROUND_Y})`}>
+            <path d={`M 0,0 Q ${tilt * 3},-${h * 0.55} ${tilt},-${h}`}
+              stroke="#1E5C1E" strokeWidth="3" fill="none" strokeLinecap="round" />
+            <path d={`M 0,0 Q ${tilt * -2},-${h * 0.5} 0,-${h * 0.82}`}
+              stroke="#2D7A2D" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+            <path d={`M 0,0 Q ${tilt},-${h * 0.45} ${tilt * -1},-${h * 0.72}`}
+              stroke="#1E5C1E" strokeWidth="2" fill="none" strokeLinecap="round" />
+          </g>
         )
       })}
 
-      {/* Leaves — nested <g> separates positioning, sway, and fresh-scale */}
+      {/* Leaves */}
       {ordered.slice(0, slots.length).map((entry, i) => {
         const [sx, sy] = slots[i]
-        const x = sx + idOff(entry.id, 7)
-        const y = sy + idOff(entry.id, 13)
-        const rot = idOff(entry.id, 19, 20)
+        const dx = idInt(entry.id, 7,  -4, 4)
+        const dy = idInt(entry.id, 13, -4, 4)
+        const rot = idInt(entry.id, 19, -30, 30)
         const color = getMoodColor(entry.mood_word)
-        const isFreshLeaf = hasFreshLeaf && entry.id === newestId
-        const swayDur = (2.8 + (i % 3) * 0.45).toFixed(2)
-        const swayDelay = (i * 0.38).toFixed(2)
+        const isFresh = hasFreshLeaf && entry.id === newestId
+        const swayDur   = (2.6 + (i % 5) * 0.42).toFixed(2)
+        const swayDelay = ((i * 0.31) % 2.8).toFixed(2)
 
         return (
-          // Outer g: position + base rotation
           <g
             key={entry.id}
-            transform={`translate(${x}, ${y}) rotate(${rot})`}
+            transform={`translate(${sx + dx}, ${sy + dy}) rotate(${rot})`}
             onClick={() => onLeafTap?.(entry)}
             style={onLeafTap ? { cursor: 'pointer' } : undefined}
           >
-            {/* Middle g: continuous sway */}
+            {/* Continuous sway */}
             <g style={{
               animation: `leafSway ${swayDur}s ${swayDelay}s ease-in-out infinite`,
               transformBox: 'fill-box',
               transformOrigin: 'center',
             }}>
-              {/* Inner g: fresh-leaf scale-in (only when just added) */}
-              <g style={isFreshLeaf ? {
-                animation: 'leafIn 0.4s ease-out both',
+              {/* Scale-in for freshly added leaf */}
+              <g style={isFresh ? {
+                animation: 'leafIn 0.45s ease-out both',
                 transformBox: 'fill-box',
                 transformOrigin: 'center',
               } : undefined}>
-                <ellipse cx={0} cy={0} rx={6} ry={8} fill={color} opacity="0.9" />
+                <ellipse cx={0} cy={0} rx={11} ry={15} fill={color} opacity="0.92" />
+                <line x1={0} y1={-13} x2={0} y2={13}
+                  stroke="rgba(0,0,0,0.14)" strokeWidth="1" strokeLinecap="round" />
               </g>
             </g>
           </g>
