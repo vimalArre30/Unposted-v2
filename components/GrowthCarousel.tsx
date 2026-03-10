@@ -351,7 +351,9 @@ export default function GrowthCarousel({ onClose }: GrowthCarouselProps) {
   const slide = SLIDES[index]
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: BG[index], transition: 'background-color 0.35s ease' }}>
+    // Outer: covers full viewport, centred column inside
+    <div className="fixed inset-0 z-50 flex flex-col items-center" style={{ backgroundColor: BG[index], transition: 'background-color 0.35s ease' }}>
+      <div className="flex w-full max-w-[480px] flex-1 flex-col overflow-hidden">
 
       {/* Forest green header strip */}
       <div
@@ -475,6 +477,7 @@ export default function GrowthCarousel({ onClose }: GrowthCarouselProps) {
             Open my garden →
           </button>
         )}
+      </div>
       </div>
     </div>
   )

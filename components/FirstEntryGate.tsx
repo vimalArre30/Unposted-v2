@@ -15,12 +15,12 @@ export default function FirstEntryGate({ moodWord, onDismiss }: Props) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex flex-col bg-white"
+      className="fixed inset-0 z-50 flex flex-col items-center bg-white"
       initial={{ y: '100%' }}
       animate={{ y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
     >
-      <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+      <div className="flex w-full max-w-[480px] flex-1 flex-col items-center justify-center px-8 text-center">
         {/* Animated checkmark */}
         <div className="mb-5">
           <AnimatedCheckmark />

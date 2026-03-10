@@ -32,21 +32,23 @@ export default function AuthModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
-      {/* Dismiss — goes home, not back to a blank profile */}
-      <button
-        onClick={() => router.replace('/')}
-        className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200"
-        aria-label="Close"
-      >
-        <svg viewBox="0 0 24 24" fill="none" width="15" height="15"
-          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 6L6 18M6 6l12 12" />
-        </svg>
-      </button>
+    <div className="fixed inset-0 z-50 flex flex-col items-center bg-white">
+      {/* Content column — constrained to 480px so close button stays near content on desktop */}
+      <div className="relative flex w-full max-w-[480px] flex-1 flex-col">
+        {/* Dismiss — goes home, not back to a blank profile */}
+        <button
+          onClick={() => router.replace('/')}
+          className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200"
+          aria-label="Close"
+        >
+          <svg viewBox="0 0 24 24" fill="none" width="15" height="15"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
 
-      {/* Centered content */}
-      <div className="flex flex-1 flex-col items-center justify-center px-8">
+        {/* Centered content */}
+        <div className="flex flex-1 flex-col items-center justify-center px-8">
         {/* Wordmark */}
         <div className="mb-8 flex items-center gap-2">
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none"
@@ -102,6 +104,7 @@ export default function AuthModal() {
         )}
 
         <p className="mt-5 text-[11px] text-gray-300">Your data stays private. No spam.</p>
+        </div>
       </div>
     </div>
   )
