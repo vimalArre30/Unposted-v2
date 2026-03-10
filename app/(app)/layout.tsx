@@ -1,19 +1,37 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import PageTransition from '@/components/PageTransition'
-import { HomeIcon, EntriesIcon, GardenIcon, ShareIcon } from '@/components/icons'
+import { HomeIcon, EntriesIcon, GardenIcon, ChecklistIcon } from '@/components/icons'
 
 const NAV = [
-  { href: '/',        label: 'Home',    Icon: HomeIcon    },
-  { href: '/entries', label: 'Entries', Icon: EntriesIcon },
-  { href: '/garden',  label: 'Garden',  Icon: GardenIcon  },
-  { href: '/share',   label: 'Share',   Icon: ShareIcon   },
+  { href: '/',           label: 'Home',      Icon: HomeIcon      },
+  { href: '/entries',    label: 'Entries',   Icon: EntriesIcon   },
+  { href: '/checklist',  label: 'Checklist', Icon: ChecklistIcon },
+  { href: '/garden',     label: 'Garden',    Icon: GardenIcon    },
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const [hasInsightBadge, setHasInsightBadge] = useState(false)
+
+  useEffect(() => {
+    // Daily insight generation — fire once per calendar day
+    const today = new Date().toDateString()
+    const lastRun = localStorage.getItem('insight_last_run')
+    if (lastRun !== today) {
+      localStorage.setItem('insight_last_run', today)
+      fetch('/api/checklist/insight', { method: 'POST' }).catch(() => {})
+    }
+
+    // Badge: count unchecked insight items
+    fetch('/api/checklist/insight')
+      .then((r) => r.json())
+      .then((d) => setHasInsightBadge((d.count ?? 0) > 0))
+      .catch(() => {})
+  }, [])
   const isAuthPage = pathname.startsWith('/auth') || pathname.startsWith('/account')
 
   return (
@@ -30,6 +48,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <nav className="flex-1 px-3 flex flex-col gap-1">
             {NAV.map(({ href, label, Icon }) => {
               const active = pathname === href
+              const showBadge = href === '/checklist' && hasInsightBadge
               return (
                 <Link key={href} href={href}
                   className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-150 min-h-[44px] ${
@@ -37,7 +56,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       ? 'bg-white/12 text-white shadow-sm'
                       : 'text-white/60 hover:bg-white/08 hover:text-white/90'
                   }`}>
-                  <Icon active={active} size={18} />
+                  <span className="relative">
+                    <Icon active={active} size={18} />
+                    {showBadge && (
+                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-400" />
+                    )}
+                  </span>
                   {label}
                 </Link>
               )
@@ -83,12 +107,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-stretch h-16">
             {NAV.map(({ href, label, Icon }) => {
               const active = pathname === href
+              const showBadge = href === '/checklist' && hasInsightBadge
               return (
                 <Link key={href} href={href}
                   className={`flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors min-h-[44px] ${
                     active ? 'text-moss' : 'text-gray-400'
                   }`}>
-                  <Icon active={active} />
+                  <span className="relative">
+                    <Icon active={active} />
+                    {showBadge && (
+                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-400" />
+                    )}
+                  </span>
                   {label}
                 </Link>
               )

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { openai } from '@/lib/openai'
 
-const EMPTY = { emotional: [], utility: [] }
+const EMPTY = { emotional: [], utility: [], ids: [] }
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -94,7 +94,15 @@ Rules:
     const emotional = Array.isArray(parsed.emotional) ? parsed.emotional.slice(0, 3) : []
     const utility   = Array.isArray(parsed.utility)   ? parsed.utility.slice(0, 3)   : []
 
-    return NextResponse.json({ emotional, utility })
+    // Persist to checklist_items
+    const rows = [
+      ...emotional.map((text: string) => ({ user_id: user.id, text, type: 'emotional', source_entry_id: entryId })),
+      ...utility.map((text: string) => ({ user_id: user.id, text, type: 'utility', source_entry_id: entryId })),
+    ]
+    const { data: persisted } = await supabase.from('checklist_items').insert(rows).select('id')
+    const ids = persisted?.map((r: { id: string }) => r.id) ?? []
+
+    return NextResponse.json({ emotional, utility, ids })
   } catch {
     return NextResponse.json(EMPTY)
   }
