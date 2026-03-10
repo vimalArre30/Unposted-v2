@@ -53,6 +53,26 @@ export function ChecklistIcon({ active = false, size = 20, className }: IconProp
   )
 }
 
+export function TimelineIcon({ active = false, size = 20, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth={active ? 2.2 : 1.6}
+      strokeLinecap="round" strokeLinejoin="round" className={className}>
+      {/* Vertical spine */}
+      <line x1="12" y1="3" x2="12" y2="21" />
+      {/* Left branch */}
+      <line x1="12" y1="8"  x2="6"  y2="8"  />
+      <circle cx="5" cy="8" r="1" fill="currentColor" stroke="none" />
+      {/* Right branch */}
+      <line x1="12" y1="14" x2="18" y2="14" />
+      <circle cx="19" cy="14" r="1" fill="currentColor" stroke="none" />
+      {/* Spine dots */}
+      <circle cx="12" cy="8"  r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="14" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 export function ShareIcon({ active = false, size = 20, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"

@@ -4,14 +4,15 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import PageTransition from '@/components/PageTransition'
-import { HomeIcon, EntriesIcon, GardenIcon, ChecklistIcon } from '@/components/icons'
+import { HomeIcon, EntriesIcon, GardenIcon, ChecklistIcon, TimelineIcon } from '@/components/icons'
 import { useSession } from '@/hooks/useSession'
 
 const NAV = [
-  { href: '/',           label: 'Home',      Icon: HomeIcon      },
-  { href: '/entries',    label: 'Entries',   Icon: EntriesIcon   },
-  { href: '/checklist',  label: 'Checklist', Icon: ChecklistIcon },
-  { href: '/garden',     label: 'Garden',    Icon: GardenIcon    },
+  { href: '/',           label: 'Home',     Icon: HomeIcon      },
+  { href: '/entries',    label: 'Entries',  Icon: EntriesIcon   },
+  { href: '/checklist',  label: 'List',     Icon: ChecklistIcon },
+  { href: '/timeline',   label: 'Timeline', Icon: TimelineIcon  },
+  { href: '/garden',     label: 'Garden',   Icon: GardenIcon    },
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
