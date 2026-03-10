@@ -1,44 +1,113 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import PageTransition from '@/components/PageTransition'
 import { HomeIcon, EntriesIcon, GardenIcon, ChecklistIcon, TimelineIcon } from '@/components/icons'
 import { useSession } from '@/hooks/useSession'
+import NavAuthGate from '@/components/NavAuthGate'
+import AuthModal from '@/components/AuthModal'
 
 const NAV = [
-  { href: '/',           label: 'Home',     Icon: HomeIcon      },
-  { href: '/entries',    label: 'Entries',  Icon: EntriesIcon   },
-  { href: '/checklist',  label: 'List',     Icon: ChecklistIcon },
-  { href: '/timeline',   label: 'Timeline', Icon: TimelineIcon  },
-  { href: '/garden',     label: 'Garden',   Icon: GardenIcon    },
+  { href: '/',           label: 'Home',     Icon: HomeIcon,      gated: false },
+  { href: '/entries',    label: 'Entries',  Icon: EntriesIcon,   gated: true  },
+  { href: '/checklist',  label: 'List',     Icon: ChecklistIcon, gated: true  },
+  { href: '/timeline',   label: 'Timeline', Icon: TimelineIcon,  gated: true  },
+  { href: '/garden',     label: 'Garden',   Icon: GardenIcon,    gated: true  },
 ]
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-  const { isAnonymous } = useSession()
-  const [hasInsightBadge, setHasInsightBadge] = useState(false)
+const GATED_PATHS = NAV.filter((n) => n.gated).map((n) => n.href)
 
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname  = usePathname()
+  const router    = useRouter()
+  const { isAnonymous, isLoading } = useSession()
+
+  const [hasInsightBadge, setHasInsightBadge] = useState(false)
+  const [showGate,      setShowGate]      = useState(false)
+  const [gatedTabName,  setGatedTabName]  = useState<string | null>(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+
+  // pendingHref: the gated page the user originally wanted
+  const pendingHref      = useRef<string | null>(null)
+  // prevIsAnonymous: detect the anonymous → registered transition
+  const prevIsAnonymous  = useRef<boolean | null>(null)
+
+  // ── Daily insight badge ────────────────────────────────────────────────────
   useEffect(() => {
-    // Daily insight generation — fire once per calendar day
-    const today = new Date().toDateString()
+    const today   = new Date().toDateString()
     const lastRun = localStorage.getItem('insight_last_run')
     if (lastRun !== today) {
       localStorage.setItem('insight_last_run', today)
       fetch('/api/checklist/insight', { method: 'POST' }).catch(() => {})
     }
-
-    // Badge: count unchecked insight items
     fetch('/api/checklist/insight')
       .then((r) => r.json())
       .then((d) => setHasInsightBadge((d.count ?? 0) > 0))
       .catch(() => {})
   }, [])
+
+  // ── Auto-gate on direct navigation to gated path while anonymous ──────────
+  useEffect(() => {
+    if (isLoading) return
+    if (isAnonymous && GATED_PATHS.some((p) => pathname.startsWith(p))) {
+      pendingHref.current = pathname
+      setGatedTabName(NAV.find((n) => pathname.startsWith(n.href))?.label.toLowerCase() ?? null)
+      setShowGate(true)
+    }
+  }, [isLoading, isAnonymous, pathname])
+
+  // ── Clear gate when arriving at a non-gated path (e.g. / after AuthModal ✕) ─
+  useEffect(() => {
+    if (!GATED_PATHS.some((p) => pathname.startsWith(p))) {
+      setShowGate(false)
+      setShowAuthModal(false)
+    }
+  }, [pathname])
+
+  // ── Redirect to pending tab after successful sign-up ──────────────────────
+  useEffect(() => {
+    if (!isLoading) {
+      if (prevIsAnonymous.current === true && !isAnonymous) {
+        // User just upgraded from anonymous → registered
+        setShowAuthModal(false)
+        setShowGate(false)
+        if (pendingHref.current) {
+          router.push(pendingHref.current)
+          pendingHref.current = null
+        }
+      }
+      prevIsAnonymous.current = isAnonymous
+    }
+  }, [isAnonymous, isLoading, router])
+
+  // ── Nav tap handler — intercepts for anonymous users ──────────────────────
+  function handleNavClick(e: React.MouseEvent, href: string, label: string, gated: boolean) {
+    if (isAnonymous && gated) {
+      e.preventDefault()
+      pendingHref.current = href
+      setGatedTabName(label.toLowerCase())
+      setShowGate(true)
+    }
+  }
+
   const isAuthPage = pathname.startsWith('/auth') || pathname.startsWith('/account')
 
   return (
     <div className={`min-h-screen bg-wave ${!isAuthPage ? 'md:flex' : ''}`}>
+
+      {/* Auth gate overlay */}
+      {showGate && (
+        <NavAuthGate
+          tabName={gatedTabName}
+          onSignUp={() => { setShowGate(false); setShowAuthModal(true) }}
+          onDismiss={() => { setShowGate(false); pendingHref.current = null; router.push('/') }}
+        />
+      )}
+
+      {/* Auth modal (triggered from gate) */}
+      {showAuthModal && <AuthModal />}
 
       {/* Desktop sidebar */}
       {!isAuthPage && (
@@ -49,11 +118,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-base font-semibold tracking-wide text-white/90">unposted</span>
           </div>
           <nav className="flex-1 px-3 flex flex-col gap-1">
-            {NAV.map(({ href, label, Icon }) => {
-              const active = pathname === href
+            {NAV.map(({ href, label, Icon, gated }) => {
+              const active    = pathname === href
               const showBadge = href === '/checklist' && hasInsightBadge
               return (
                 <Link key={href} href={href}
+                  onClick={(e) => handleNavClick(e, href, label, gated)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-150 min-h-[44px] ${
                     active
                       ? 'bg-white/12 text-white shadow-sm'
@@ -112,11 +182,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/90 backdrop-blur-md border-t border-gray-100/80"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="flex items-stretch h-16">
-            {NAV.map(({ href, label, Icon }) => {
-              const active = pathname === href
+            {NAV.map(({ href, label, Icon, gated }) => {
+              const active    = pathname === href
               const showBadge = href === '/checklist' && hasInsightBadge
               return (
                 <Link key={href} href={href}
+                  onClick={(e) => handleNavClick(e, href, label, gated)}
                   className={`flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors min-h-[44px] ${
                     active ? 'text-moss' : 'text-gray-400'
                   }`}>
