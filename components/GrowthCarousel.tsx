@@ -348,8 +348,6 @@ export default function GrowthCarousel({ onClose }: GrowthCarouselProps) {
     touchStartX.current = null
   }
 
-  const slide = SLIDES[index]
-
   return (
     // Outer: covers full viewport, centred column inside
     <div className="fixed inset-0 z-50 flex flex-col items-center" style={{ backgroundColor: BG[index], transition: 'background-color 0.35s ease' }}>
