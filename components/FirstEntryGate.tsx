@@ -54,6 +54,12 @@ export default function FirstEntryGate({ moodWord, onDismiss }: Props) {
           >
             Not now
           </button>
+          <p className="text-xs text-gray-400">
+            Already have an account?{' '}
+            <a href="/auth/login" className="text-green-700 underline underline-offset-2">
+              Log in
+            </a>
+          </p>
         </div>
       </div>
     </motion.div>

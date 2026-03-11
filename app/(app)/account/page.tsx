@@ -38,6 +38,12 @@ export default function AccountPage() {
         .eq('id', user.id)
         .single()
 
+      // If setup was never completed (no username), send them to the setup wizard
+      if (!data?.username) {
+        router.replace('/auth/setup')
+        return
+      }
+
       setProfile(data ?? null)
       setProfileLoading(false)
     }

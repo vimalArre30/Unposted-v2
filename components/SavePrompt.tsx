@@ -84,9 +84,15 @@ export default function SavePrompt({ onDismiss }: SavePromptProps) {
           </form>
         )}
 
+        <p className="mt-4 text-center text-xs text-gray-400">
+          Already have an account?{' '}
+          <a href="/auth/login" className="text-green-700 underline underline-offset-2">
+            Log in
+          </a>
+        </p>
         <button
           onClick={onDismiss}
-          className="mt-4 w-full text-center text-xs text-gray-400 underline underline-offset-2 hover:text-gray-600"
+          className="mt-2 w-full text-center text-xs text-gray-400 underline underline-offset-2 hover:text-gray-600"
         >
           Not now
         </button>

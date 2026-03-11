@@ -66,17 +66,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [pathname])
 
-  // ── Redirect to pending tab after successful sign-up ──────────────────────
+  // ── Redirect to setup wizard after successful sign-up ────────────────────
   useEffect(() => {
     if (!isLoading) {
       if (prevIsAnonymous.current === true && !isAnonymous) {
-        // User just upgraded from anonymous → registered
+        // User just upgraded from anonymous → registered — must complete setup first
         setShowAuthModal(false)
         setShowGate(false)
-        if (pendingHref.current) {
-          router.push(pendingHref.current)
-          pendingHref.current = null
-        }
+        pendingHref.current = null
+        router.push('/auth/setup')
       }
       prevIsAnonymous.current = isAnonymous
     }
@@ -106,8 +104,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      {/* Auth modal (triggered from gate) */}
-      {showAuthModal && <AuthModal />}
+      {/* Auth modal (triggered from gate) — not shown on /account since that page renders its own */}
+      {showAuthModal && !pathname.startsWith('/account') && (
+        <AuthModal onDismiss={() => { setShowAuthModal(false); setShowGate(false); router.push('/') }} />
+      )}
 
       {/* Desktop sidebar */}
       {!isAuthPage && (
