@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import PageTransition from '@/components/PageTransition'
 import { HomeIcon, EntriesIcon, GardenIcon, ChecklistIcon, TimelineIcon } from '@/components/icons'
-import { useSession } from '@/hooks/useSession'
+import { SessionProvider, useSession } from '@/context/SessionContext'
 import NavAuthGate from '@/components/NavAuthGate'
 import AuthModal from '@/components/AuthModal'
 
@@ -20,6 +20,14 @@ const NAV = [
 const GATED_PATHS = NAV.filter((n) => n.gated).map((n) => n.href)
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider>
+      <AppLayoutInner>{children}</AppLayoutInner>
+    </SessionProvider>
+  )
+}
+
+function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname  = usePathname()
   const router    = useRouter()
   const { isAnonymous, isLoading } = useSession()

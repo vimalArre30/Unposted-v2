@@ -2,13 +2,14 @@
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SignupPage() {
   const router = useRouter()
   const [phase, setPhase] = useState<'email' | 'otp'>('email')
   const [email, setEmail] = useState('')
   const [isSending, setIsSending] = useState(false)
-  const [digits, setDigits] = useState(['', '', '', '', '', '', '', ''])
+  const [digits, setDigits] = useState(['', '', '', '', '', ''])
   const [isVerifying, setIsVerifying] = useState(false)
   const [shake, setShake] = useState(false)
   const [otpError, setOtpError] = useState('')
@@ -56,7 +57,7 @@ export default function SignupPage() {
       body: JSON.stringify({ email: email.trim() }),
     })
     startResendCountdown()
-    setDigits(['', '', '', '', '', '', '', ''])
+    setDigits(['', '', '', '', '', ''])
     setTimeout(() => inputRefs.current[0]?.focus(), 100)
   }
 
@@ -71,11 +72,13 @@ export default function SignupPage() {
     const data = await res.json()
     setIsVerifying(false)
     if (data.ok) {
+      // Refresh client-side session so onAuthStateChange fires before navigation
+      await createClient().auth.refreshSession()
       router.push('/auth/setup')
     } else {
       setShake(true)
       setOtpError('Incorrect code, try again')
-      setDigits(['', '', '', '', '', '', '', ''])
+      setDigits(['', '', '', '', '', ''])
       setTimeout(() => { setShake(false); inputRefs.current[0]?.focus() }, 600)
     }
   }
@@ -85,7 +88,7 @@ export default function SignupPage() {
     const next = [...digits]
     next[index] = char
     setDigits(next)
-    if (char && index < 7) {
+    if (char && index < 5) {
       inputRefs.current[index + 1]?.focus()
     }
     if (next.every((d) => d !== '')) {
@@ -145,7 +148,7 @@ export default function SignupPage() {
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">Check your inbox</h1>
               <p className="mt-2 text-sm text-gray-400 leading-relaxed">
-                We sent an 8-digit code to{' '}
+                We sent a 6-digit code to{' '}
                 <span className="font-medium text-gray-600">{email}</span>
               </p>
             </div>
