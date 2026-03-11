@@ -29,10 +29,17 @@ export default function SetupPage() {
   const [error, setError] = useState('')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Redirect if not authenticated
+  // Guard: must be authenticated (but not fully set up) to be here
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.replace('/auth/signup')
+      if (!user) {
+        router.replace('/auth/signup')
+        return
+      }
+      // If setup is already complete (email expunged), go home
+      if (user.email?.endsWith('@private.unposted.app')) {
+        router.replace('/')
+      }
     })
   }, [router, supabase.auth])
 
@@ -68,6 +75,10 @@ export default function SetupPage() {
     const data = await res.json()
     setIsSubmitting(false)
     if (data.ok) {
+      // Refresh the session so the cookie reflects the new @private.unposted.app email.
+      // The middleware setup guard checks this email — without the refresh it would
+      // redirect back to /auth/setup on the next navigation.
+      await supabase.auth.refreshSession()
       router.push('/')
     } else {
       setError(data.error ?? 'Something went wrong')

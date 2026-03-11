@@ -32,7 +32,7 @@ export default function AnonPersistBanner() {
         style={{ backgroundColor: '#F2F7F2', border: '1px solid #D4E8D4' }}
       >
         <p className="text-sm text-gray-600 leading-snug">
-          🌿 Sign up to save your tree permanently
+          🌿 Session only — sign up to save permanently
         </p>
         <div className="flex flex-shrink-0 items-center gap-3">
           <button
@@ -42,6 +42,12 @@ export default function AnonPersistBanner() {
           >
             Sign up →
           </button>
+          <a
+            href="/auth/login"
+            className="text-sm text-gray-400 underline underline-offset-2 hover:text-gray-600"
+          >
+            Log in
+          </a>
           <button
             onClick={dismiss}
             className="text-gray-300 transition-colors hover:text-gray-500"

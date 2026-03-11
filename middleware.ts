@@ -42,6 +42,20 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Setup guard: non-anonymous users who haven't completed setup must go to /auth/setup.
+  // After complete-setup, the real email is replaced with {id}@private.unposted.app,
+  // so that suffix is the reliable signal that setup is done — no DB query needed.
+  if (user && !user.is_anonymous) {
+    const email = user.email ?? ''
+    const setupComplete = email.endsWith('@private.unposted.app')
+    const pathname = request.nextUrl.pathname
+    if (!setupComplete && !pathname.startsWith('/auth/')) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/auth/setup'
+      return NextResponse.redirect(redirectUrl)
+    }
+  }
+
   return supabaseResponse
 }
 

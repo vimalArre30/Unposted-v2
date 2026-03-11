@@ -285,8 +285,8 @@ function DonePageInner() {
         />
       )}
 
-      {/* Anonymous user — returning: slim persistent banner */}
-      {isAnonymous && totalEntries !== null && totalEntries > 1 && (
+      {/* Anonymous user — persistent banner: after dismissing first-entry gate, or on subsequent entries */}
+      {isAnonymous && (gateDismissed || (totalEntries !== null && totalEntries > 1)) && (
         <AnonPersistBanner />
       )}
     </div>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-type Step = 'email' | 'otp' | 'success'
+type Step = 'email' | 'otp'
 const N = 6
 
 /* ─── OTP 6-box input ──────────────────────────────────────────────── */
@@ -102,7 +102,11 @@ function OtpInput({
 
 /* ─── AuthModal ────────────────────────────────────────────────────── */
 
-export default function AuthModal() {
+interface AuthModalProps {
+  onDismiss?: () => void
+}
+
+export default function AuthModal({ onDismiss }: AuthModalProps) {
   const router = useRouter()
   const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
@@ -180,11 +184,11 @@ export default function AuthModal() {
       return
     }
 
-    // Refresh session so useSession picks up the upgraded user
+    // Refresh session so useSession picks up the upgraded user, then go to setup wizard
     const supabase = createClient()
     await supabase.auth.refreshSession()
 
-    setStep('success')
+    router.push('/auth/setup')
   }
 
   async function handleResend() {
@@ -210,7 +214,8 @@ export default function AuthModal() {
         <div className="relative flex w-full max-w-[480px] flex-1 flex-col">
           {/* Dismiss */}
           <button
-            onClick={() => router.replace('/')}
+            type="button"
+            onClick={() => onDismiss ? onDismiss() : router.replace('/')}
             className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200"
             aria-label="Close"
           >
@@ -269,6 +274,12 @@ export default function AuthModal() {
                 </form>
 
                 <p className="mt-5 text-[11px] text-gray-300">Your data stays private. No spam.</p>
+                <p className="mt-4 text-xs text-gray-400">
+                  Already have an account?{' '}
+                  <a href="/auth/login" className="text-green-700 underline underline-offset-2">
+                    Log in
+                  </a>
+                </p>
               </>
             )}
 
@@ -311,16 +322,6 @@ export default function AuthModal() {
               </>
             )}
 
-            {/* ── Step: success ── */}
-            {step === 'success' && (
-              <div className="text-center">
-                <p className="text-2xl mb-2">✓</p>
-                <p className="text-sm font-medium text-green-700">Verified</p>
-                <p className="mt-2 text-xs text-gray-400">
-                  Your entries are saved. Your tree keeps growing.
-                </p>
-              </div>
-            )}
           </div>
         </div>
       </div>

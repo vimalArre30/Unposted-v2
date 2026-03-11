@@ -13,6 +13,7 @@ export default function SignupPage() {
   const [shake, setShake] = useState(false)
   const [otpError, setOtpError] = useState('')
   const [resendCountdown, setResendCountdown] = useState(0)
+  const [sendError, setSendError] = useState('')
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -37,9 +38,13 @@ export default function SignupPage() {
     })
     setIsSending(false)
     if (res.ok) {
+      setSendError('')
       setPhase('otp')
       startResendCountdown()
       setTimeout(() => inputRefs.current[0]?.focus(), 100)
+    } else {
+      const data = await res.json()
+      setSendError(data.error || 'Failed to send code. Try again.')
     }
   }
 
@@ -115,6 +120,9 @@ export default function SignupPage() {
               required
               className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-base text-gray-800 placeholder-gray-300 focus:border-green-600 focus:outline-none"
             />
+            {sendError && (
+              <p className="text-sm text-red-500">{sendError}</p>
+            )}
             <button
               type="submit"
               disabled={!email.trim() || isSending}
