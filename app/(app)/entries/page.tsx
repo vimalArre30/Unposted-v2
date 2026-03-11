@@ -30,9 +30,8 @@ export default function EntriesPage() {
   }, [])
 
   useEffect(() => {
-    if (!sessionLoading && isAnonymous) {
-      setShowSavePrompt(true)
-    }
+    if (sessionLoading) return
+    setShowSavePrompt(isAnonymous)
   }, [sessionLoading, isAnonymous])
 
   if (entries === null) {

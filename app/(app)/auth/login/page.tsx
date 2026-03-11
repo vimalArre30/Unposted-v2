@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -25,6 +26,9 @@ export default function LoginPage() {
     setIsLoading(false)
 
     if (data.ok) {
+      // Refresh client-side session so onAuthStateChange fires and all useSession
+      // consumers (layout, page components) update before navigation.
+      await createClient().auth.refreshSession()
       router.push('/')
     } else {
       setError(data.error ?? 'Something went wrong')

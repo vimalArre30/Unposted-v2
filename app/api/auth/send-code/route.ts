@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'crypto'
 import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+
+function hashEmail(email: string): string {
+  return createHash('sha256').update(email.toLowerCase().trim()).digest('hex')
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -96,6 +101,23 @@ export async function POST(req: NextRequest) {
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
+  }
+
+  // Early duplicate check: block before sending code if the email already has an account.
+  // NOTE: legacy accounts created before the email_hash feature have email_hash = NULL —
+  // NULL != hash in SQL so they won't accidentally block new signups.
+  const emailHash = hashEmail(email)
+  const { data: existing } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .eq('email_hash', emailHash)
+    .maybeSingle()
+
+  if (existing) {
+    return NextResponse.json(
+      { error: 'An account already exists for this email. Please log in instead.' },
+      { status: 409 },
+    )
   }
 
   // Rate limit: max 3 send attempts per email per 10 minutes

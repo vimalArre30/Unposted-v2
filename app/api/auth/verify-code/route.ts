@@ -37,8 +37,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Incorrect code' }, { status: 400 })
     }
 
-    // Bug 4: Check for duplicate account via email_hash before proceeding.
-    // We store a one-way hash so we can detect duplicates without storing raw email.
+    // Second-layer duplicate check (first layer is in send-code). Guards against race conditions
+    // where two requests arrive simultaneously, or the first-layer check was bypassed.
+    // NOTE: legacy accounts created before the email_hash feature have email_hash = NULL —
+    // NULL != hash in SQL so they won't accidentally block new signups.
     const emailHash = hashEmail(email)
     const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
