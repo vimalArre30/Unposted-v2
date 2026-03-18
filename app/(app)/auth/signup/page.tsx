@@ -32,7 +32,7 @@ export default function SignupPage() {
     e.preventDefault()
     if (!email.trim() || isSending) return
     setIsSending(true)
-    const res = await fetch('/api/auth/send-otp', {
+    const res = await fetch('/api/auth/send-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.trim() }),
@@ -51,7 +51,7 @@ export default function SignupPage() {
 
   async function handleResend() {
     if (resendCountdown > 0) return
-    await fetch('/api/auth/send-otp', {
+    await fetch('/api/auth/send-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.trim() }),
@@ -64,20 +64,20 @@ export default function SignupPage() {
   async function verifyOtp(code: string) {
     setIsVerifying(true)
     setOtpError('')
-    const res = await fetch('/api/auth/verify-otp', {
+    const res = await fetch('/api/auth/verify-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim(), token: code }),
+      body: JSON.stringify({ email: email.trim(), code }),
     })
     const data = await res.json()
     setIsVerifying(false)
-    if (data.ok) {
+    if (data.success) {
       // Refresh client-side session so onAuthStateChange fires before navigation
       await createClient().auth.refreshSession()
       router.push('/auth/setup')
     } else {
       setShake(true)
-      setOtpError('Incorrect code, try again')
+      setOtpError(data.error || 'Incorrect code, try again')
       setDigits(['', '', '', '', '', ''])
       setTimeout(() => { setShake(false); inputRefs.current[0]?.focus() }, 600)
     }
