@@ -89,7 +89,21 @@ export async function POST(req: NextRequest) {
       .update({ is_anonymous: false })
       .eq('id', user.id)
 
-    return NextResponse.json({ success: true })
+    // Generate a one-time magic-link token so the client can establish a real session.
+    // admin.generateLink does NOT send any email — it just returns a token.
+    // This replaces refreshSession() which fails when Supabase invalidates the
+    // anonymous session after upgrading the user's identity to an email account.
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email,
+    })
+
+    if (linkError || !linkData?.properties?.hashed_token) {
+      console.error('verify-code: generateLink failed', linkError)
+      return NextResponse.json({ error: 'Verified, but failed to create session. Please try again.' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, token_hash: linkData.properties.hashed_token })
   } catch (e) {
     console.error('verify-code: unexpected error', e)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

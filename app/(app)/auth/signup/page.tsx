@@ -72,8 +72,19 @@ export default function SignupPage() {
     const data = await res.json()
     setIsVerifying(false)
     if (data.success) {
-      // Refresh client-side session so onAuthStateChange fires before navigation
-      await createClient().auth.refreshSession()
+      // Exchange the one-time token for a real Supabase session.
+      // refreshSession() is unreliable here because Supabase invalidates the anonymous
+      // session when the user is upgraded to an email account via the admin API.
+      const { error: sessionError } = await createClient().auth.verifyOtp({
+        token_hash: data.token_hash,
+        type: 'magiclink',
+      })
+      if (sessionError) {
+        setOtpError('Code verified but session failed. Please try again.')
+        setDigits(['', '', '', '', '', ''])
+        setTimeout(() => { setShake(false); inputRefs.current[0]?.focus() }, 600)
+        return
+      }
       router.push('/auth/setup')
     } else {
       setShake(true)

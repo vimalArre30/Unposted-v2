@@ -184,9 +184,17 @@ export default function AuthModal({ onDismiss }: AuthModalProps) {
       return
     }
 
-    // Refresh session so useSession picks up the upgraded user, then go to setup wizard
-    const supabase = createClient()
-    await supabase.auth.refreshSession()
+    // Exchange the one-time token for a real Supabase session.
+    // refreshSession() fails here because Supabase invalidates the anonymous session
+    // when the user is upgraded to an email account via the admin API.
+    const { error: sessionError } = await createClient().auth.verifyOtp({
+      token_hash: data.token_hash,
+      type: 'magiclink',
+    })
+    if (sessionError) {
+      setError('Code verified but session failed. Please refresh and try again.')
+      return
+    }
 
     router.push('/auth/setup')
   }
