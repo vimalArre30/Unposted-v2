@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
+import Script from 'next/script'
 import './globals.css'
 
 const geistSans = localFont({
@@ -30,6 +31,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <Script src="https://www.googletagmanager.com/gtag/js?id=G-P5GVXHFWC1" strategy="afterInteractive" />
+      <Script id="gtag-init" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-P5GVXHFWC1');
+      ` }} />
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white`}>
         <div className="mx-auto w-full max-w-[480px] md:max-w-none min-h-screen">
           {children}
