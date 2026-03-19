@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { trackEvent } from '@/lib/gtag'
 
 interface Props {
   tabName: string | null
@@ -20,6 +22,10 @@ const SUBCOPY = 'Sign up to save your entries and watch your garden grow.'
 
 export default function NavAuthGate({ tabName, onSignUp, onDismiss }: Props) {
   const heading = (tabName && HEADINGS[tabName]) ?? DEFAULT_HEADING
+
+  useEffect(() => {
+    trackEvent('auth_gate_shown', { tab: tabName ?? 'unknown' })
+  }, [tabName])
 
   return (
     <motion.div
@@ -48,7 +54,7 @@ export default function NavAuthGate({ tabName, onSignUp, onDismiss }: Props) {
         {/* CTAs */}
         <div className="flex w-full max-w-xs flex-col items-center gap-4">
           <button
-            onClick={onSignUp}
+            onClick={() => { trackEvent('auth_gate_cta_tapped', { action: 'signup' }); onSignUp() }}
             className="w-full rounded-full py-4 text-sm font-medium text-white transition-opacity active:opacity-80"
             style={{ backgroundColor: '#1E3A1F' }}
           >
@@ -62,7 +68,11 @@ export default function NavAuthGate({ tabName, onSignUp, onDismiss }: Props) {
           </button>
           <p className="text-xs text-gray-400">
             Already have an account?{' '}
-            <a href="/auth/login" className="text-green-700 underline underline-offset-2">
+            <a
+              href="/auth/login"
+              onClick={() => trackEvent('auth_gate_cta_tapped', { action: 'login' })}
+              className="text-green-700 underline underline-offset-2"
+            >
               Log in
             </a>
           </p>

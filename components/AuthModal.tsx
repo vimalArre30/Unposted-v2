@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { trackEvent } from '@/lib/gtag'
 
 type Step = 'email' | 'otp'
 const N = 6
@@ -118,6 +119,7 @@ export default function AuthModal({ onDismiss }: AuthModalProps) {
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
+    trackEvent('signup_start')
     setTimeout(() => emailRef.current?.focus(), 100)
   }, [])
 
@@ -143,6 +145,7 @@ export default function AuthModal({ onDismiss }: AuthModalProps) {
   async function handleSendCode(e?: React.FormEvent) {
     e?.preventDefault()
     if (!email.trim() || isSubmitting) return
+    trackEvent('email_submitted')
     setIsSubmitting(true)
     setError(null)
 
@@ -164,6 +167,7 @@ export default function AuthModal({ onDismiss }: AuthModalProps) {
   }
 
   async function handleVerifyCode(code: string) {
+    trackEvent('otp_entered')
     setIsSubmitting(true)
     setError(null)
     setOtpError(false)
@@ -177,6 +181,7 @@ export default function AuthModal({ onDismiss }: AuthModalProps) {
     setIsSubmitting(false)
 
     if (!res.ok) {
+      trackEvent('auth_error', { error_type: 'otp_invalid' })
       setOtpError(true)
       setError(data.error ?? 'Incorrect code. Try again.')
       // Reset shake after animation
@@ -184,6 +189,7 @@ export default function AuthModal({ onDismiss }: AuthModalProps) {
       return
     }
 
+    trackEvent('otp_verified')
     // Exchange the one-time token for a real Supabase session.
     // refreshSession() fails here because Supabase invalidates the anonymous session
     // when the user is upgraded to an email account via the admin API.

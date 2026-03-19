@@ -1,8 +1,9 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { trackEvent } from '@/lib/gtag'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -18,6 +19,8 @@ export default function SignupPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  useEffect(() => { trackEvent('signup_start') }, [])
+
   function startResendCountdown() {
     setResendCountdown(30)
     countdownRef.current = setInterval(() => {
@@ -31,6 +34,7 @@ export default function SignupPage() {
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault()
     if (!email.trim() || isSending) return
+    trackEvent('email_submitted')
     setIsSending(true)
     const res = await fetch('/api/auth/send-code', {
       method: 'POST',
@@ -46,6 +50,7 @@ export default function SignupPage() {
     } else {
       const data = await res.json()
       setSendError(data.error || 'Failed to send code. Try again.')
+      trackEvent('auth_error', { error_type: 'send_code_failed' })
     }
   }
 
@@ -62,6 +67,7 @@ export default function SignupPage() {
   }
 
   async function verifyOtp(code: string) {
+    trackEvent('otp_entered')
     setIsVerifying(true)
     setOtpError('')
     const res = await fetch('/api/auth/verify-code', {
@@ -72,6 +78,7 @@ export default function SignupPage() {
     const data = await res.json()
     setIsVerifying(false)
     if (data.success) {
+      trackEvent('otp_verified')
       // Exchange the one-time token for a real Supabase session.
       // refreshSession() is unreliable here because Supabase invalidates the anonymous
       // session when the user is upgraded to an email account via the admin API.
@@ -87,6 +94,7 @@ export default function SignupPage() {
       }
       router.push('/auth/setup')
     } else {
+      trackEvent('auth_error', { error_type: 'otp_invalid' })
       setShake(true)
       setOtpError(data.error || 'Incorrect code, try again')
       setDigits(['', '', '', '', '', ''])

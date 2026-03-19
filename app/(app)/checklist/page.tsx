@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { trackEvent } from '@/lib/gtag'
 
 interface ChecklistItem {
   id: string
@@ -83,6 +84,12 @@ export default function ChecklistPage() {
   }, [])
 
   const toggle = useCallback(async (id: string, current: boolean) => {
+    if (!current) {
+      const item = items.find((i) => i.id === id)
+      trackEvent('checklist_item_checked', {
+        source: item?.type === 'insight' ? 'fingerprint' : 'session',
+      })
+    }
     // Optimistic update
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, is_checked: !current } : item))
@@ -99,7 +106,7 @@ export default function ChecklistPage() {
         prev.map((item) => (item.id === id ? { ...item, is_checked: current } : item))
       )
     }
-  }, [])
+  }, [items])
 
   const uncheckedCount = items.filter((i) => !i.is_checked).length
 

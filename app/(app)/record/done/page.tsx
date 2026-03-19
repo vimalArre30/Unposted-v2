@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { trackEvent } from '@/lib/gtag'
 import LifeTree, { type LeafEntry } from '@/components/LifeTree'
 import SharePrompt, { shouldShowSharePrompt } from '@/components/SharePrompt'
 import ChecklistCard from '@/components/ChecklistCard'
@@ -161,6 +162,10 @@ function DonePageInner() {
   useEffect(() => {
     return () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current) }
   }, [])
+
+  useEffect(() => {
+    if (cardVisible && reflection) trackEvent('reflection_viewed')
+  }, [cardVisible, reflection])
 
   function handleSave() {
     setToastVisible(true)

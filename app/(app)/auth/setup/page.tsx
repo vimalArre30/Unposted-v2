@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { trackEvent } from '@/lib/gtag'
 
 const SECURITY_QUESTIONS = [
   "What was the name of your first pet?",
@@ -75,12 +76,14 @@ export default function SetupPage() {
     const data = await res.json()
     setIsSubmitting(false)
     if (data.ok) {
+      trackEvent('onboarding_complete')
       // Refresh the session so the cookie reflects the new @private.unposted.app email.
       // The middleware setup guard checks this email — without the refresh it would
       // redirect back to /auth/setup on the next navigation.
       await supabase.auth.refreshSession()
       router.push('/')
     } else {
+      trackEvent('auth_error', { error_type: 'setup_failed' })
       setError(data.error ?? 'Something went wrong')
     }
   }
@@ -132,7 +135,7 @@ export default function SetupPage() {
               )}
             </div>
             <button
-              onClick={() => setStep(2)}
+              onClick={() => { trackEvent('username_set'); setStep(2) }}
               disabled={usernameStatus !== 'available'}
               className="w-full rounded-2xl bg-green-700 py-3.5 text-base font-medium text-white transition-opacity disabled:opacity-40"
             >
@@ -175,7 +178,7 @@ export default function SetupPage() {
               className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:border-green-600 focus:outline-none"
             />
             <button
-              onClick={() => setStep(3)}
+              onClick={() => { trackEvent('security_setup_complete'); setStep(3) }}
               disabled={!answer.trim()}
               className="w-full rounded-2xl bg-green-700 py-3.5 text-base font-medium text-white transition-opacity disabled:opacity-40"
             >

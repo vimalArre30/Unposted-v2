@@ -1,8 +1,9 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { trackEvent } from '@/lib/gtag'
 
 interface MoodOption {
   label: string
@@ -36,6 +37,8 @@ function MoodPageInner() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => { trackEvent('mood_check_reached') }, [])
+
   async function handleDone() {
     if (!selected || !sessionId || isSubmitting) return
     setIsSubmitting(true)
@@ -54,6 +57,7 @@ function MoodPageInner() {
     }
 
     const { entryId } = await res.json()
+    trackEvent('session_completed', { mood: selected! })
     router.push(`/record/done?entryId=${entryId}`)
   }
 
@@ -82,7 +86,7 @@ function MoodPageInner() {
           return (
             <button
               key={label}
-              onClick={() => setSelected(label)}
+              onClick={() => { setSelected(label); trackEvent('mood_selected', { mood: label }) }}
               className="mood-pill relative flex flex-col items-center gap-1.5 rounded-[18px] px-2 py-4 overflow-hidden min-h-[44px]"
               style={{
                 backgroundColor: isSelected ? selectedBg : bg,

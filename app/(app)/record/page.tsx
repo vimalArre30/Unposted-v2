@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import VoiceRecorder from '@/components/VoiceRecorder'
 import { BackIcon } from '@/components/icons'
 import { motion } from 'framer-motion'
+import { trackEvent } from '@/lib/gtag'
 
 type Message = { role: 'assistant' | 'user'; content: string }
 
@@ -57,6 +58,7 @@ function RecordPageInner() {
 
       await fetchNextQuestion([], fp, sid)
       setIsInitializing(false)
+      trackEvent('session_started', { mode, input_type: 'voice', language: 'en' })
     }
 
     init()
@@ -102,6 +104,11 @@ function RecordPageInner() {
       { role: 'assistant', content: currentQuestion },
       { role: 'user', content: answer.trim() },
     ]
+    trackEvent('question_answered', {
+      mode,
+      question_number: updatedConv.filter((m) => m.role === 'user').length,
+      input_type: showTextInput ? 'text' : 'voice',
+    })
     setConversation(updatedConv)
     setAnswer('')
 

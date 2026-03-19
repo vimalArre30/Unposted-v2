@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import html2canvas from 'html2canvas'
+import { trackEvent } from '@/lib/gtag'
 
 interface CardData {
   innerWeather: string
@@ -151,6 +152,7 @@ export default function SharePage() {
   const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    trackEvent('share_card_opened')
     fetch('/api/share/card-data')
       .then((r) => r.json())
       .then((d) => { setCardData(d); setLoading(false) })
@@ -195,6 +197,7 @@ export default function SharePage() {
         canvas.toBlob(async (blob) => {
           if (!blob) return
           try {
+            trackEvent('share_card_shared')
             await navigator.share({
               files: [new File([blob], filename, { type: 'image/png' })],
               title: 'My Unposted card',
@@ -218,6 +221,7 @@ export default function SharePage() {
   }
 
   function triggerDownload(canvas: HTMLCanvasElement, filename: string) {
+    trackEvent('share_card_exported')
     const a = document.createElement('a')
     a.href = canvas.toDataURL('image/png')
     a.download = filename

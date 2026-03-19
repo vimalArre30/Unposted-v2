@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { trackEvent } from '@/lib/gtag'
 import StreakWidget from '@/components/StreakWidget'
 import {
   LeafIcon, MemoryIcon, PulseIcon, ClockIcon, ForwardIcon, VentIcon,
@@ -87,6 +88,14 @@ function HomePageInner() {
       .catch(() => {})
   }, [searchParams])
 
+  useEffect(() => {
+    if (streakData === null) return
+    trackEvent('home_viewed', {
+      personalisation_active: (entryCount ?? 0) >= 3,
+      streak_length: streakData.current_streak,
+    })
+  }, [streakData, entryCount])
+
   return (
     <div className="flex min-h-screen flex-col pb-24">
 
@@ -136,7 +145,7 @@ function HomePageInner() {
         {MODES.map((mode) => (
           <button
             key={mode.id}
-            onClick={() => router.push(`/record?mode=${mode.id}`)}
+            onClick={() => { trackEvent('mode_selected', { mode: mode.id }); router.push(`/record?mode=${mode.id}`) }}
             className="w-full rounded-[20px] px-5 py-4 text-left transition-all duration-150 active:scale-[0.98] hover:shadow-soft min-h-[44px]"
             style={{
               backgroundColor: mode.bg,

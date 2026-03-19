@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { trackEvent } from '@/lib/gtag'
 import PageTransition from '@/components/PageTransition'
 import { HomeIcon, EntriesIcon, GardenIcon, ChecklistIcon, TimelineIcon } from '@/components/icons'
 import { SessionProvider, useSession } from '@/context/SessionContext'
@@ -41,6 +42,12 @@ function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const pendingHref      = useRef<string | null>(null)
   // prevIsAnonymous: detect the anonymous → registered transition
   const prevIsAnonymous  = useRef<boolean | null>(null)
+
+  // ── Tab view tracking ──────────────────────────────────────────────────────
+  useEffect(() => {
+    const tab = NAV.find((n) => pathname === n.href)?.label
+    if (tab) trackEvent('tab_viewed', { tab: tab.toLowerCase() })
+  }, [pathname])
 
   // ── Daily insight badge ────────────────────────────────────────────────────
   useEffect(() => {
